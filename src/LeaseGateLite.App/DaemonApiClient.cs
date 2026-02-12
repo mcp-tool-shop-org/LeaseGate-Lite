@@ -80,6 +80,17 @@ public sealed class DaemonApiClient
         return await _httpClient.GetFromJsonAsync<List<PresetDefinition>>("/presets", cancellationToken);
     }
 
+    public async Task<ProfilesSnapshotResponse?> GetProfilesAsync(CancellationToken cancellationToken)
+    {
+        return await _httpClient.GetFromJsonAsync<ProfilesSnapshotResponse>("/profiles", cancellationToken);
+    }
+
+    public async Task<ServiceCommandResponse?> SetAppProfileAsync(SetAppProfileRequest request, CancellationToken cancellationToken)
+    {
+        var response = await _httpClient.PostAsJsonAsync("/profiles/apply", request, cancellationToken);
+        return await response.Content.ReadFromJsonAsync<ServiceCommandResponse>(cancellationToken);
+    }
+
     public async Task<PresetPreviewResponse?> PreviewPresetAsync(string name, CancellationToken cancellationToken)
     {
         var response = await _httpClient.PostAsJsonAsync("/preset/preview", new PresetApplyRequest { Name = name }, cancellationToken);
@@ -100,12 +111,15 @@ public sealed class DaemonApiClient
         return await response.Content.ReadFromJsonAsync<ServiceCommandResponse>(cancellationToken);
     }
 
-    public async Task<ServiceCommandResponse?> SimulateFloodAsync(int interactiveRequests, int backgroundRequests, CancellationToken cancellationToken)
+    public async Task<ServiceCommandResponse?> SimulateFloodAsync(int interactiveRequests, int backgroundRequests, CancellationToken cancellationToken, string clientAppId = "", string processName = "", string signature = "")
     {
         var response = await _httpClient.PostAsJsonAsync("/simulate/flood", new SimulateFloodRequest
         {
             InteractiveRequests = interactiveRequests,
-            BackgroundRequests = backgroundRequests
+            BackgroundRequests = backgroundRequests,
+            ClientAppId = clientAppId,
+            ProcessName = processName,
+            Signature = signature
         }, cancellationToken);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<ServiceCommandResponse>(cancellationToken);

@@ -63,6 +63,16 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.Use(async (context, next) =>
+{
+    var daemonState = context.RequestServices.GetRequiredService<DaemonState>();
+    var clientAppId = context.Request.Headers["X-Client-AppId"].ToString();
+    var processName = context.Request.Headers["X-Process-Name"].ToString();
+    var signature = context.Request.Headers["X-Client-Signature"].ToString();
+    daemonState.RegisterClient(clientAppId, processName, signature);
+    await next();
+});
+
 app.MapGet("/status", (DaemonState daemon) => Results.Ok(daemon.GetStatus()));
 
 app.MapGet("/config", (DaemonState daemon) => Results.Ok(daemon.GetConfig()));
@@ -114,6 +124,14 @@ app.MapPost("/preset/preview", (PresetApplyRequest request, DaemonState daemon) 
 app.MapPost("/preset/apply", (PresetApplyRequest request, DaemonState daemon) =>
 {
     var result = daemon.ApplyPreset(request.Name);
+    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+});
+
+app.MapGet("/profiles", (DaemonState daemon) => Results.Ok(daemon.GetProfiles()));
+
+app.MapPost("/profiles/apply", (SetAppProfileRequest request, DaemonState daemon) =>
+{
+    var result = daemon.SetAppProfile(request);
     return result.Success ? Results.Ok(result) : Results.BadRequest(result);
 });
 

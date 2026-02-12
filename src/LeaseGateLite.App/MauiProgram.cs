@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace LeaseGateLite.App;
 
@@ -20,6 +21,8 @@ public static class MauiProgram
 		{
 			client.BaseAddress = new Uri("http://localhost:5177");
 			client.Timeout = TimeSpan.FromSeconds(5);
+			client.DefaultRequestHeaders.Add("X-Client-AppId", "LeaseGateLite.App");
+			client.DefaultRequestHeaders.Add("X-Process-Name", Process.GetCurrentProcess().ProcessName);
 		});
 
 #if DEBUG

@@ -15,8 +15,11 @@ public partial class MainPage : ContentPage
 	private bool _hasPendingChanges;
 	private bool _pauseEvents;
 	private bool _ignoreAutostartToggle;
+	private bool _ignoreProfileEvents;
 	private long _lastEventId;
 	private readonly List<EventEntry> _eventBuffer = new();
+	private readonly List<SeenClient> _recentProfileApps = new();
+	private ProfilesSnapshotResponse? _profiles;
 
 	public MainPage(DaemonApiClient daemonApiClient)
 	{
@@ -31,6 +34,7 @@ public partial class MainPage : ContentPage
 			["Shaping"] = CardShaping,
 			["RateLimits"] = CardRateLimits,
 			["Presets"] = CardPresets,
+			["Profiles"] = CardProfiles,
 			["Diagnostics"] = CardDiagnostics,
 			["Audit"] = CardAudit
 		};
@@ -74,6 +78,43 @@ public partial class MainPage : ContentPage
 		await RefreshStatusAndEventsAsync();
 		await RefreshConfigAsync();
 		await RefreshAutostartAsync();
+		await RefreshProfilesAsync();
+	}
+
+	private async Task RefreshProfilesAsync()
+	{
+		try
+		{
+			var profiles = await _daemonApiClient.GetProfilesAsync(CancellationToken.None);
+			if (profiles is null)
+			{
+				return;
+			}
+
+			_profiles = profiles;
+			_recentProfileApps.Clear();
+			_recentProfileApps.AddRange(profiles.RecentlySeenApps);
+
+			_ignoreProfileEvents = true;
+			RecentAppsPicker.ItemsSource = _recentProfileApps
+				.Select(app => string.IsNullOrWhiteSpace(app.ProcessName) ? app.ClientAppId : $"{app.ClientAppId} ({app.ProcessName})")
+				.ToList();
+
+			if (_recentProfileApps.Count > 0)
+			{
+				RecentAppsPicker.SelectedIndex = 0;
+				LoadProfileOverride(_recentProfileApps[0].ClientAppId);
+			}
+			else
+			{
+				ProfilesStatusLabel.Text = "No client apps observed yet.";
+			}
+		}
+		finally
+		{
+			_ignoreProfileEvents = false;
+			UpdateProfileLabels();
+		}
 	}
 
 	private async Task RefreshAutostartAsync()
@@ -252,6 +293,35 @@ public partial class MainPage : ContentPage
 		BurstAllowanceLabel.Text = $"Burst allowance: {(int)BurstAllowanceSlider.Value}";
 	}
 
+	private void UpdateProfileLabels()
+	{
+		ProfileMaxConcurrencyLabel.Text = $"App max concurrency: {(int)ProfileMaxConcurrencySlider.Value}";
+		ProfileBackgroundCapLabel.Text = $"App background cap: {(int)ProfileBackgroundCapSlider.Value}";
+		ProfileMaxOutputLabel.Text = $"App max output tokens: {(int)ProfileMaxOutputSlider.Value}";
+		ProfileMaxPromptLabel.Text = $"App max prompt/context tokens: {(int)ProfileMaxPromptSlider.Value}";
+		ProfileRequestsPerMinuteLabel.Text = $"App requests/min: {(int)ProfileRequestsPerMinuteSlider.Value}";
+		ProfileTokensPerMinuteLabel.Text = $"App tokens/min: {(int)ProfileTokensPerMinuteSlider.Value}";
+	}
+
+	private void LoadProfileOverride(string appId)
+	{
+		if (_profiles is null)
+		{
+			return;
+		}
+
+		var baseline = CloneConfig(_profiles.DefaultProfile);
+		var overrideProfile = _profiles.Overrides.FirstOrDefault(v => string.Equals(v.ClientAppId, appId, StringComparison.OrdinalIgnoreCase));
+
+		ProfileMaxConcurrencySlider.Value = overrideProfile?.MaxConcurrency ?? baseline.MaxConcurrency;
+		ProfileBackgroundCapSlider.Value = overrideProfile?.BackgroundCap ?? baseline.BackgroundCap;
+		ProfileMaxOutputSlider.Value = overrideProfile?.MaxOutputTokensClamp ?? baseline.MaxOutputTokensClamp;
+		ProfileMaxPromptSlider.Value = overrideProfile?.MaxPromptTokensClamp ?? baseline.MaxPromptTokensClamp;
+		ProfileRequestsPerMinuteSlider.Value = overrideProfile?.RequestsPerMinute ?? baseline.RequestsPerMinute;
+		ProfileTokensPerMinuteSlider.Value = overrideProfile?.TokensPerMinute ?? baseline.TokensPerMinute;
+		UpdateProfileLabels();
+	}
+
 	private LiteConfig BuildConfigFromControls()
 	{
 		return new LiteConfig
@@ -337,6 +407,95 @@ public partial class MainPage : ContentPage
 	private async void OnReconnectClicked(object? sender, EventArgs e)
 	{
 		await RefreshAllAsync();
+	}
+
+	private void OnRecentAppChanged(object? sender, EventArgs e)
+	{
+		if (_ignoreProfileEvents)
+		{
+			return;
+		}
+
+		if (RecentAppsPicker.SelectedIndex < 0 || RecentAppsPicker.SelectedIndex >= _recentProfileApps.Count)
+		{
+			return;
+		}
+
+		LoadProfileOverride(_recentProfileApps[RecentAppsPicker.SelectedIndex].ClientAppId);
+		ProfilesStatusLabel.Text = $"Selected app: {_recentProfileApps[RecentAppsPicker.SelectedIndex].ClientAppId}";
+	}
+
+	private void OnProfileOverrideChanged(object? sender, EventArgs e)
+	{
+		if (_ignoreProfileEvents)
+		{
+			return;
+		}
+
+		UpdateProfileLabels();
+	}
+
+	private async Task ApplySelectedProfilePresetAsync(string presetName)
+	{
+		if (RecentAppsPicker.SelectedIndex < 0 || RecentAppsPicker.SelectedIndex >= _recentProfileApps.Count)
+		{
+			ProfilesStatusLabel.Text = "Select a recent app first.";
+			return;
+		}
+
+		var selected = _recentProfileApps[RecentAppsPicker.SelectedIndex];
+		var result = await _daemonApiClient.SetAppProfileAsync(new SetAppProfileRequest
+		{
+			ClientAppId = selected.ClientAppId,
+			ProcessName = selected.ProcessName,
+			Signature = selected.Signature,
+			PresetName = presetName
+		}, CancellationToken.None);
+
+		ProfilesStatusLabel.Text = result?.Message ?? "Failed to apply app preset.";
+		await RefreshProfilesAsync();
+	}
+
+	private async void OnProfileQuietClicked(object? sender, EventArgs e)
+	{
+		await ApplySelectedProfilePresetAsync("Quiet");
+	}
+
+	private async void OnProfileBalancedClicked(object? sender, EventArgs e)
+	{
+		await ApplySelectedProfilePresetAsync("Balanced");
+	}
+
+	private async void OnProfilePerformanceClicked(object? sender, EventArgs e)
+	{
+		await ApplySelectedProfilePresetAsync("Performance");
+	}
+
+	private async void OnApplyAppProfileClicked(object? sender, EventArgs e)
+	{
+		if (RecentAppsPicker.SelectedIndex < 0 || RecentAppsPicker.SelectedIndex >= _recentProfileApps.Count)
+		{
+			ProfilesStatusLabel.Text = "Select a recent app first.";
+			return;
+		}
+
+		var selected = _recentProfileApps[RecentAppsPicker.SelectedIndex];
+		var request = new SetAppProfileRequest
+		{
+			ClientAppId = selected.ClientAppId,
+			ProcessName = selected.ProcessName,
+			Signature = selected.Signature,
+			MaxConcurrency = (int)Math.Round(ProfileMaxConcurrencySlider.Value),
+			BackgroundCap = (int)Math.Round(ProfileBackgroundCapSlider.Value),
+			MaxOutputTokensClamp = (int)Math.Round(ProfileMaxOutputSlider.Value),
+			MaxPromptTokensClamp = (int)Math.Round(ProfileMaxPromptSlider.Value),
+			RequestsPerMinute = (int)Math.Round(ProfileRequestsPerMinuteSlider.Value),
+			TokensPerMinute = (int)Math.Round(ProfileTokensPerMinuteSlider.Value)
+		};
+
+		var result = await _daemonApiClient.SetAppProfileAsync(request, CancellationToken.None);
+		ProfilesStatusLabel.Text = result?.Message ?? "Failed to apply app override.";
+		await RefreshProfilesAsync();
 	}
 
 	private async void OnStartOnLoginToggled(object? sender, ToggledEventArgs e)

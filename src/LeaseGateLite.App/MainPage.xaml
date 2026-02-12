@@ -168,7 +168,14 @@
                 CommandParameter="Presets"
                 Clicked="OnChecklistJumpClicked" />
 
-            <Label Text="H) Diagnostics + audit-lite"
+                 <Label Text="H) Per-app profiles"
+                     FontAttributes="Bold"
+                     FontSize="13" />
+                 <Button Text="Recent apps + per-app preset/overrides"
+                  CommandParameter="Profiles"
+                  Clicked="OnChecklistJumpClicked" />
+
+                 <Label Text="I) Diagnostics + audit-lite"
                    FontAttributes="Bold"
                    FontSize="13" />
             <Button Text="Export + Event Tail + Summary Copy"
@@ -427,6 +434,69 @@
                    FontSize="12" />
             </VerticalStackLayout>
             </Border>
+
+                <Border x:Name="CardProfiles"
+                StrokeShape="RoundRectangle 14"
+                Padding="12"
+                BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1F1F1F}">
+                <VerticalStackLayout Spacing="8">
+                <Label Text="Profiles"
+                   FontSize="18"
+                   FontAttributes="Bold" />
+                <Label Text="Assign per-app presets and per-app throughput overrides." />
+                <HorizontalStackLayout Spacing="8">
+                    <Label Text="Recent app" VerticalOptions="Center" />
+                    <Picker x:Name="RecentAppsPicker"
+                        WidthRequest="320"
+                        SelectedIndexChanged="OnRecentAppChanged" />
+                </HorizontalStackLayout>
+                <HorizontalStackLayout Spacing="8">
+                    <Button Text="App Quiet"
+                        Clicked="OnProfileQuietClicked" />
+                    <Button Text="App Balanced"
+                        Clicked="OnProfileBalancedClicked" />
+                    <Button Text="App Performance"
+                        Clicked="OnProfilePerformanceClicked" />
+                </HorizontalStackLayout>
+
+                <Label x:Name="ProfileMaxConcurrencyLabel" />
+                <Slider x:Name="ProfileMaxConcurrencySlider"
+                    Minimum="1"
+                    Maximum="32"
+                    ValueChanged="OnProfileOverrideChanged" />
+                <Label x:Name="ProfileBackgroundCapLabel" />
+                <Slider x:Name="ProfileBackgroundCapSlider"
+                    Minimum="0"
+                    Maximum="32"
+                    ValueChanged="OnProfileOverrideChanged" />
+                <Label x:Name="ProfileMaxOutputLabel" />
+                <Slider x:Name="ProfileMaxOutputSlider"
+                    Minimum="64"
+                    Maximum="4096"
+                    ValueChanged="OnProfileOverrideChanged" />
+                <Label x:Name="ProfileMaxPromptLabel" />
+                <Slider x:Name="ProfileMaxPromptSlider"
+                    Minimum="256"
+                    Maximum="32000"
+                    ValueChanged="OnProfileOverrideChanged" />
+                <Label x:Name="ProfileRequestsPerMinuteLabel" />
+                <Slider x:Name="ProfileRequestsPerMinuteSlider"
+                    Minimum="10"
+                    Maximum="1000"
+                    ValueChanged="OnProfileOverrideChanged" />
+                <Label x:Name="ProfileTokensPerMinuteLabel" />
+                <Slider x:Name="ProfileTokensPerMinuteSlider"
+                    Minimum="1000"
+                    Maximum="500000"
+                    ValueChanged="OnProfileOverrideChanged" />
+
+                <Button Text="Apply App Override"
+                    Clicked="OnApplyAppProfileClicked" />
+                <Label x:Name="ProfilesStatusLabel" />
+                <Label Text="✅ Covered by: H) Per-app profiles"
+                       FontSize="12" />
+                </VerticalStackLayout>
+                </Border>
 
             <Border x:Name="CardDiagnostics"
                 StrokeShape="RoundRectangle 14"

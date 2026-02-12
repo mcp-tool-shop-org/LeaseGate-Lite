@@ -12,6 +12,9 @@ public sealed class DaemonState
     private readonly string _configPath;
     private readonly string _diagnosticsDirectory;
     private readonly string _eventLogPath;
+    private readonly Dictionary<string, SeenClient> _recentClients = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, AppProfileOverride> _profileOverrides = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, (int Interactive, int Background)> _appDemands = new(StringComparer.OrdinalIgnoreCase);
     private LiteConfig _config;
     private bool _running;
     private DateTimeOffset _startedAtUtc;
@@ -415,6 +418,62 @@ public sealed class DaemonState
         }
     }
 
+    public void RegisterClient(string clientAppId, string processName, string signature)
+    {
+        lock (_lock)
+        {
+            var key = string.IsNullOrWhiteSpace(clientAppId) ? "unknown-client" : clientAppId.Trim();
+            _recentClients[key] = new SeenClient
+            {
+                ClientAppId = key,
+                ProcessName = string.IsNullOrWhiteSpace(processName) ? key : processName.Trim(),
+                Signature = signature?.Trim() ?? string.Empty,
+                LastSeenUtc = DateTimeOffset.UtcNow
+            };
+        }
+    }
+
+    public ProfilesSnapshotResponse GetProfiles()
+    {
+        lock (_lock)
+        {
+            return new ProfilesSnapshotResponse
+            {
+                DefaultProfile = Clone(_config),
+                RecentlySeenApps = _recentClients.Values.OrderByDescending(v => v.LastSeenUtc).Take(50).ToList(),
+                Overrides = _profileOverrides.Values.OrderBy(v => v.ClientAppId).ToList()
+            };
+        }
+    }
+
+    public ServiceCommandResponse SetAppProfile(SetAppProfileRequest request)
+    {
+        lock (_lock)
+        {
+            if (string.IsNullOrWhiteSpace(request.ClientAppId))
+            {
+                return new ServiceCommandResponse { Success = false, Message = "clientAppId is required" };
+            }
+
+            RegisterClient(request.ClientAppId, request.ProcessName, request.Signature);
+
+            _profileOverrides[request.ClientAppId] = new AppProfileOverride
+            {
+                ClientAppId = request.ClientAppId,
+                PresetName = request.PresetName,
+                MaxConcurrency = request.MaxConcurrency,
+                BackgroundCap = request.BackgroundCap,
+                MaxOutputTokensClamp = request.MaxOutputTokensClamp,
+                MaxPromptTokensClamp = request.MaxPromptTokensClamp,
+                RequestsPerMinute = request.RequestsPerMinute,
+                TokensPerMinute = request.TokensPerMinute
+            };
+
+            AddEvent(EventCategory.Config, "info", "app profile updated", request.ClientAppId);
+            return new ServiceCommandResponse { Success = true, Message = "app profile updated" };
+        }
+    }
+
     public ServiceCommandResponse SetPressureMode(PressureMode mode)
     {
         lock (_lock)
@@ -433,9 +492,17 @@ public sealed class DaemonState
     {
         lock (_lock)
         {
-            _interactiveDemand = Math.Clamp(request.InteractiveRequests, 0, 200);
-            _backgroundDemand = Math.Clamp(request.BackgroundRequests, 0, 200);
-            AddEvent(EventCategory.Lease, "warn", "flood simulation triggered", $"interactive={_interactiveDemand}; background={_backgroundDemand}");
+            var appId = string.IsNullOrWhiteSpace(request.ClientAppId) ? "unknown-client" : request.ClientAppId.Trim();
+            RegisterClient(appId, request.ProcessName, request.Signature);
+
+            var interactive = Math.Clamp(request.InteractiveRequests, 0, 200);
+            var background = Math.Clamp(request.BackgroundRequests, 0, 200);
+            _appDemands[appId] = (interactive, background);
+
+            _interactiveDemand = _appDemands.Values.Sum(v => v.Interactive);
+            _backgroundDemand = _appDemands.Values.Sum(v => v.Background);
+
+            AddEvent(EventCategory.Lease, "warn", "flood simulation triggered", $"app={appId}; interactive={interactive}; background={background}");
             return new ServiceCommandResponse
             {
                 Success = true,
@@ -478,8 +545,22 @@ public sealed class DaemonState
             _availableRamPercent = 35;
         }
 
-        _interactiveDemand = Math.Clamp(_interactiveDemand + _random.Next(-2, 4), 0, 24);
-        _backgroundDemand = Math.Clamp(_backgroundDemand + _random.Next(-2, 5), 0, 40);
+        if (_appDemands.Count == 0)
+        {
+            _appDemands["default-client"] = (_random.Next(0, 10), _random.Next(0, 14));
+            RegisterClient("default-client", "default-client", string.Empty);
+        }
+
+        foreach (var appId in _appDemands.Keys.ToList())
+        {
+            var current = _appDemands[appId];
+            var nextInteractive = Math.Clamp(current.Interactive + _random.Next(-1, 3), 0, 30);
+            var nextBackground = Math.Clamp(current.Background + _random.Next(-1, 4), 0, 40);
+            _appDemands[appId] = (nextInteractive, nextBackground);
+        }
+
+        _interactiveDemand = _appDemands.Values.Sum(v => v.Interactive);
+        _backgroundDemand = _appDemands.Values.Sum(v => v.Background);
 
         var rawPressure = Math.Max(_cpuPercent, 100 - _availableRamPercent);
         var alpha = 0.05 + ((100 - Math.Clamp(_config.SmoothingPercent, 5, 95)) / 100.0) * 0.55;
@@ -528,20 +609,52 @@ public sealed class DaemonState
             _lastThrottleReason = ThrottleReason.ManualClamp;
         }
 
-        var reservedInteractive = Math.Min(_config.InteractiveReserve, _effectiveConcurrency);
-        var availableForBackground = Math.Max(0, Math.Min(_config.BackgroundCap, _effectiveConcurrency - reservedInteractive));
-        if (_backgroundPaused)
+        var activeInteractive = 0;
+        var activeBackground = 0;
+        var interactiveQueued = 0;
+        var backgroundQueued = 0;
+
+        foreach (var (appId, demand) in _appDemands.Take(20))
         {
-            availableForBackground = 0;
-            _lastThrottleReason = ThrottleReason.ManualClamp;
+            var appConfig = ResolveConfigForApp(appId);
+            var appCap = Math.Max(1, Math.Min(_effectiveConcurrency, appConfig.MaxConcurrency));
+            var reservedInteractive = Math.Min(appConfig.InteractiveReserve, appCap);
+            var availableForBackground = Math.Max(0, Math.Min(appConfig.BackgroundCap, appCap - reservedInteractive));
+
+            if (_backgroundPaused)
+            {
+                availableForBackground = 0;
+                _lastThrottleReason = ThrottleReason.ManualClamp;
+            }
+
+            var appActiveInteractive = Math.Min(demand.Interactive, Math.Max(1, reservedInteractive));
+            var appActiveBackground = Math.Min(demand.Background, availableForBackground);
+
+            activeInteractive += appActiveInteractive;
+            activeBackground += appActiveBackground;
+            interactiveQueued += Math.Max(0, demand.Interactive - appActiveInteractive);
+            backgroundQueued += Math.Max(0, demand.Background - appActiveBackground);
         }
 
-        var activeInteractive = Math.Min(_interactiveDemand, Math.Max(1, reservedInteractive));
-        var activeBackground = Math.Min(_backgroundDemand, availableForBackground);
+        var totalActive = activeInteractive + activeBackground;
+        if (totalActive > _effectiveConcurrency)
+        {
+            var overflow = totalActive - _effectiveConcurrency;
+            var trimBackground = Math.Min(overflow, activeBackground);
+            activeBackground -= trimBackground;
+            backgroundQueued += trimBackground;
+            overflow -= trimBackground;
+            if (overflow > 0)
+            {
+                var trimInteractive = Math.Min(overflow, activeInteractive);
+                activeInteractive -= trimInteractive;
+                interactiveQueued += trimInteractive;
+            }
+        }
 
         _activeCalls = activeInteractive + activeBackground;
-        _interactiveQueueDepth = Math.Max(0, _interactiveDemand - activeInteractive);
-        _backgroundQueueDepth = Math.Max(0, _backgroundDemand - activeBackground);
+        _interactiveQueueDepth = interactiveQueued;
+        _backgroundQueueDepth = backgroundQueued;
 
         EmitPressureSample((int)Math.Round(_smoothedPressure));
         EmitLeaseSignals();
@@ -759,6 +872,33 @@ public sealed class DaemonState
         }
 
         return diffs;
+    }
+
+    private LiteConfig ResolveConfigForApp(string clientAppId)
+    {
+        var resolved = Clone(_config);
+        if (!_profileOverrides.TryGetValue(clientAppId, out var appProfile))
+        {
+            return resolved;
+        }
+
+        if (!string.IsNullOrWhiteSpace(appProfile.PresetName))
+        {
+            var preset = GetPresets().FirstOrDefault(p => string.Equals(p.Name, appProfile.PresetName, StringComparison.OrdinalIgnoreCase));
+            if (preset is not null)
+            {
+                resolved = Clone(preset.Config);
+            }
+        }
+
+        resolved.MaxConcurrency = appProfile.MaxConcurrency ?? resolved.MaxConcurrency;
+        resolved.BackgroundCap = appProfile.BackgroundCap ?? resolved.BackgroundCap;
+        resolved.MaxOutputTokensClamp = appProfile.MaxOutputTokensClamp ?? resolved.MaxOutputTokensClamp;
+        resolved.MaxPromptTokensClamp = appProfile.MaxPromptTokensClamp ?? resolved.MaxPromptTokensClamp;
+        resolved.RequestsPerMinute = appProfile.RequestsPerMinute ?? resolved.RequestsPerMinute;
+        resolved.TokensPerMinute = appProfile.TokensPerMinute ?? resolved.TokensPerMinute;
+
+        return resolved;
     }
 
     private void AddEvent(EventCategory category, string level, string message, string detail)

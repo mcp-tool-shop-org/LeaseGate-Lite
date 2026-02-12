@@ -50,4 +50,7 @@ public sealed class SimulateFloodRequest
 {
     public int InteractiveRequests { get; set; } = 20;
     public int BackgroundRequests { get; set; } = 20;
+    public string ClientAppId { get; set; } = string.Empty;
+    public string ProcessName { get; set; } = string.Empty;
+    public string Signature { get; set; } = string.Empty;
 }
