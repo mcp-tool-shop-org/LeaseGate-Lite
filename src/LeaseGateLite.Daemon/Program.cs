@@ -1,6 +1,51 @@
 using LeaseGateLite.Contracts;
 using LeaseGateLite.Daemon;
 
+const string MutexName = "Local\\LeaseGateLite.Daemon.Singleton";
+
+var cliArgs = args.Select(a => a.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+if (cliArgs.Contains("--install-autostart"))
+{
+    var result = AutostartManager.SetEnabled(true);
+    Console.WriteLine(result.Message);
+    return;
+}
+
+if (cliArgs.Contains("--uninstall-autostart"))
+{
+    var result = AutostartManager.SetEnabled(false);
+    Console.WriteLine(result.Message);
+    return;
+}
+
+if (cliArgs.Contains("--status"))
+{
+    var autostart = AutostartManager.GetStatus();
+    var running = Mutex.TryOpenExisting(MutexName, out var existing);
+    existing?.Dispose();
+
+    Console.WriteLine($"running={running}");
+    Console.WriteLine($"autostartSupported={autostart.Supported}");
+    Console.WriteLine($"autostartEnabled={autostart.Enabled}");
+    Console.WriteLine($"autostartMechanism={autostart.Mechanism}");
+    Console.WriteLine($"autostartCommand={autostart.Command}");
+    return;
+}
+
+if (cliArgs.Count > 0 && !cliArgs.Contains("--run"))
+{
+    Console.WriteLine("Unknown mode. Supported: --run, --install-autostart, --uninstall-autostart, --status");
+    return;
+}
+
+using var singleInstance = new SingleInstanceGuard(MutexName);
+if (!singleInstance.Acquired)
+{
+    Console.WriteLine("daemon already running; refusing second instance");
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
@@ -8,6 +53,10 @@ builder.Services.AddSingleton<DaemonState>();
 builder.WebHost.UseUrls("http://localhost:5177");
 
 var app = builder.Build();
+
+var daemon = app.Services.GetRequiredService<DaemonState>();
+var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+lifetime.ApplicationStopping.Register(daemon.NotifyHostStopping);
 
 if (app.Environment.IsDevelopment())
 {
@@ -33,6 +82,21 @@ app.MapPost("/service/start", (DaemonState daemon) => Results.Ok(daemon.Start())
 app.MapPost("/service/stop", (DaemonState daemon) => Results.Ok(daemon.Stop()));
 
 app.MapPost("/service/restart", (DaemonState daemon) => Results.Ok(daemon.Restart()));
+
+app.MapPost("/service/exit", (DaemonState daemon, IHostApplicationLifetime hostLifetime) =>
+{
+    daemon.NotifyHostStopping();
+    hostLifetime.StopApplication();
+    return Results.Ok(new ServiceCommandResponse { Success = true, Message = "daemon exiting" });
+});
+
+app.MapGet("/autostart/status", () => Results.Ok(AutostartManager.GetStatus()));
+
+app.MapPost("/autostart", (AutostartUpdateRequest request) =>
+{
+    var result = AutostartManager.SetEnabled(request.Enabled);
+    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+});
 
 app.MapPost("/diagnostics/export", (DaemonState daemon) => Results.Ok(daemon.ExportDiagnostics()));
 

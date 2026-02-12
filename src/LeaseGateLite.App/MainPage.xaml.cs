@@ -14,6 +14,7 @@ public partial class MainPage : ContentPage
 	private bool _ignoreConfigEvents;
 	private bool _hasPendingChanges;
 	private bool _pauseEvents;
+	private bool _ignoreAutostartToggle;
 	private long _lastEventId;
 	private readonly List<EventEntry> _eventBuffer = new();
 
@@ -72,6 +73,32 @@ public partial class MainPage : ContentPage
 	{
 		await RefreshStatusAndEventsAsync();
 		await RefreshConfigAsync();
+		await RefreshAutostartAsync();
+	}
+
+	private async Task RefreshAutostartAsync()
+	{
+		try
+		{
+			var status = await _daemonApiClient.GetAutostartStatusAsync(CancellationToken.None);
+			if (status is null)
+			{
+				return;
+			}
+
+			_ignoreAutostartToggle = true;
+			StartOnLoginSwitch.IsEnabled = status.Supported;
+			StartOnLoginSwitch.IsToggled = status.Enabled;
+			StartOnLoginStatusLabel.Text = status.Message;
+		}
+		catch
+		{
+			StartOnLoginStatusLabel.Text = "Autostart unavailable.";
+		}
+		finally
+		{
+			_ignoreAutostartToggle = false;
+		}
 	}
 
 	private async Task RefreshStatusAndEventsAsync()
@@ -310,6 +337,18 @@ public partial class MainPage : ContentPage
 	private async void OnReconnectClicked(object? sender, EventArgs e)
 	{
 		await RefreshAllAsync();
+	}
+
+	private async void OnStartOnLoginToggled(object? sender, ToggledEventArgs e)
+	{
+		if (_ignoreAutostartToggle)
+		{
+			return;
+		}
+
+		var result = await _daemonApiClient.SetAutostartAsync(e.Value, CancellationToken.None);
+		StartOnLoginStatusLabel.Text = result?.Message ?? "Autostart update failed.";
+		await RefreshAutostartAsync();
 	}
 
 	private async void OnStartClicked(object? sender, EventArgs e)

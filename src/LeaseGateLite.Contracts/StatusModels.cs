@@ -18,4 +18,20 @@ public sealed class StatusSnapshot
     public ThrottleReason LastThrottleReason { get; set; } = ThrottleReason.None;
     public bool AdaptiveClampActive { get; set; }
     public PressureMode PressureMode { get; set; } = PressureMode.Normal;
+    public bool DegradedMode { get; set; }
+    public string DegradedReason { get; set; } = string.Empty;
+}
+
+public sealed class AutostartStatusResponse
+{
+    public bool Supported { get; set; }
+    public bool Enabled { get; set; }
+    public string Mechanism { get; set; } = "registry-run";
+    public string Command { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+}
+
+public sealed class AutostartUpdateRequest
+{
+    public bool Enabled { get; set; }
 }

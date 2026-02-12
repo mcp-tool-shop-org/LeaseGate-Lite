@@ -204,6 +204,15 @@
                 <Button Text="Restart"
                     Clicked="OnRestartClicked" />
                 </HorizontalStackLayout>
+                  <HorizontalStackLayout Spacing="8">
+                      <Label Text="Start on login"
+                          VerticalOptions="Center" />
+                      <Switch x:Name="StartOnLoginSwitch"
+                        Toggled="OnStartOnLoginToggled" />
+                      <Label x:Name="StartOnLoginStatusLabel"
+                          FontSize="12"
+                          VerticalOptions="Center" />
+                  </HorizontalStackLayout>
                 <Label x:Name="VersionUptimeLabel"
                    FontFamily="OpenSansSemibold" />
                 <HorizontalStackLayout Spacing="8">

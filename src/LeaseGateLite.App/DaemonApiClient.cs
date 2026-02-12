@@ -47,6 +47,17 @@ public sealed class DaemonApiClient
         return await response.Content.ReadFromJsonAsync<ServiceCommandResponse>(cancellationToken);
     }
 
+    public async Task<AutostartStatusResponse?> GetAutostartStatusAsync(CancellationToken cancellationToken)
+    {
+        return await _httpClient.GetFromJsonAsync<AutostartStatusResponse>("/autostart/status", cancellationToken);
+    }
+
+    public async Task<ServiceCommandResponse?> SetAutostartAsync(bool enabled, CancellationToken cancellationToken)
+    {
+        var response = await _httpClient.PostAsJsonAsync("/autostart", new AutostartUpdateRequest { Enabled = enabled }, cancellationToken);
+        return await response.Content.ReadFromJsonAsync<ServiceCommandResponse>(cancellationToken);
+    }
+
     public async Task<DiagnosticsExportResponse?> ExportDiagnosticsAsync(CancellationToken cancellationToken)
     {
         var response = await _httpClient.PostAsync("/diagnostics/export", null, cancellationToken);

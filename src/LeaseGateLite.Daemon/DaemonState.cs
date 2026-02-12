@@ -31,6 +31,8 @@ public sealed class DaemonState
     private double _smoothedPressure;
     private int _interactiveDemand;
     private int _backgroundDemand;
+    private bool _degradedMode;
+    private string _degradedReason = string.Empty;
 
     public DaemonState()
     {
@@ -73,7 +75,9 @@ public sealed class DaemonState
                 AvailableRamPercent = _availableRamPercent,
                 LastThrottleReason = _lastThrottleReason,
                 AdaptiveClampActive = _adaptiveClampActive,
-                PressureMode = _pressureMode
+                PressureMode = _pressureMode,
+                DegradedMode = _degradedMode,
+                DegradedReason = _degradedReason
             };
         }
     }
@@ -255,6 +259,7 @@ public sealed class DaemonState
         PersistConfig();
         _effectiveConcurrency = Math.Clamp(_effectiveConcurrency, 1, Math.Max(1, _config.MaxConcurrency));
         AddEvent(EventCategory.Config, "info", "configuration applied", "local user");
+        AddEvent(EventCategory.Service, "info", "policy reloaded in-place", "no lease reset");
 
         return new ConfigApplyResponse
         {
@@ -309,6 +314,14 @@ public sealed class DaemonState
             _lastThrottleReason = ThrottleReason.None;
             AddEvent(EventCategory.Service, "info", "daemon restarted", "service command");
             return new ServiceCommandResponse { Success = true, Message = "daemon restarted" };
+        }
+    }
+
+    public void NotifyHostStopping()
+    {
+        lock (_lock)
+        {
+            AddEvent(EventCategory.Service, "warn", "daemon host stopping", "graceful shutdown");
         }
     }
 
@@ -422,18 +435,31 @@ public sealed class DaemonState
             return;
         }
 
-        var delta = _pressureMode == PressureMode.Spiky ? 18 : 8;
-        _cpuPercent = Math.Clamp(_cpuPercent + _random.Next(-delta, delta + 1), 18, 98);
-        _availableRamPercent = Math.Clamp(_availableRamPercent + _random.Next(-delta, delta + 1), 8, 95);
-
-        if (_cpuPercent == 0)
+        try
         {
-            _cpuPercent = _random.Next(28, 65);
+            var delta = _pressureMode == PressureMode.Spiky ? 18 : 8;
+            _cpuPercent = Math.Clamp(_cpuPercent + _random.Next(-delta, delta + 1), 18, 98);
+            _availableRamPercent = Math.Clamp(_availableRamPercent + _random.Next(-delta, delta + 1), 8, 95);
+
+            if (_cpuPercent == 0)
+            {
+                _cpuPercent = _random.Next(28, 65);
+            }
+
+            if (_availableRamPercent == 0)
+            {
+                _availableRamPercent = _random.Next(35, 80);
+            }
+
+            _degradedMode = false;
+            _degradedReason = string.Empty;
         }
-
-        if (_availableRamPercent == 0)
+        catch (Exception ex)
         {
-            _availableRamPercent = _random.Next(35, 80);
+            _degradedMode = true;
+            _degradedReason = ex.Message;
+            _cpuPercent = 65;
+            _availableRamPercent = 35;
         }
 
         _interactiveDemand = Math.Clamp(_interactiveDemand + _random.Next(-2, 4), 0, 24);
@@ -479,6 +505,12 @@ public sealed class DaemonState
         var recoverLerp = Math.Clamp(_config.RecoveryRatePercent, 5, 100) / 100.0;
         _effectiveConcurrency = (int)Math.Round((_effectiveConcurrency * (1 - recoverLerp)) + (target * recoverLerp));
         _effectiveConcurrency = Math.Clamp(_effectiveConcurrency, _running ? 1 : 0, _config.MaxConcurrency);
+
+        if (_degradedMode)
+        {
+            _effectiveConcurrency = Math.Min(_effectiveConcurrency, Math.Max(1, _config.MaxConcurrency / 2));
+            _lastThrottleReason = ThrottleReason.ManualClamp;
+        }
 
         var reservedInteractive = Math.Min(_config.InteractiveReserve, _effectiveConcurrency);
         var availableForBackground = Math.Max(0, Math.Min(_config.BackgroundCap, _effectiveConcurrency - reservedInteractive));
