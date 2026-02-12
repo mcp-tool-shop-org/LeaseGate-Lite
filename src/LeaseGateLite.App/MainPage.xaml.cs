@@ -300,9 +300,15 @@ public partial class MainPage : ContentPage
 
 	private void UpdateControlLabels()
 	{
-		MaxConcurrencyLabel.Text = $"Max concurrency (base): {(int)MaxConcurrencySlider.Value}   |   Effective: {_latestStatus?.EffectiveConcurrency ?? 0}";
-		InteractiveReserveLabel.Text = $"Interactive reserve: {(int)InteractiveReserveSlider.Value}";
-		BackgroundCapLabel.Text = $"Background cap: {(int)BackgroundCapSlider.Value}";
+		var maxConcurrency = (int)MaxConcurrencySlider.Value;
+		var interactiveReserve = (int)InteractiveReserveSlider.Value;
+		var backgroundCap = (int)BackgroundCapSlider.Value;
+		var softThreshold = (int)SoftThresholdSlider.Value;
+		var hardThreshold = (int)HardThresholdSlider.Value;
+
+		MaxConcurrencyLabel.Text = $"Max concurrency (base): {maxConcurrency}   |   Effective now: {_latestStatus?.EffectiveConcurrency ?? 0}";
+		InteractiveReserveLabel.Text = $"Interactive reserve: {interactiveReserve} (reserved for active desktop work)";
+		BackgroundCapLabel.Text = $"Background cap: {backgroundCap} (limits non-interactive jobs)";
 		SoftThresholdLabel.Text = $"Soft threshold: {(int)SoftThresholdSlider.Value}%";
 		HardThresholdLabel.Text = $"Hard threshold: {(int)HardThresholdSlider.Value}%";
 		RecoveryRateLabel.Text = $"Recovery rate: {(int)RecoveryRateSlider.Value}%";
@@ -314,6 +320,30 @@ public partial class MainPage : ContentPage
 		RequestsPerMinuteLabel.Text = $"Requests/min: {(int)RequestsPerMinuteSlider.Value}";
 		TokensPerMinuteLabel.Text = $"Tokens/min: {(int)TokensPerMinuteSlider.Value}";
 		BurstAllowanceLabel.Text = $"Burst allowance: {(int)BurstAllowanceSlider.Value}";
+
+		var previewAt85 = PredictConcurrencyAtCpu(maxConcurrency, softThreshold, hardThreshold, 85);
+		var nowEffective = _latestStatus?.EffectiveConcurrency ?? maxConcurrency;
+		ConcurrencyImpactPreviewLabel.Text = $"Impact preview: Right now you'll run up to {nowEffective} calls at once. If CPU hits 85%, you'll drop to ~{previewAt85}.";
+
+		var previewAt95 = PredictConcurrencyAtCpu(maxConcurrency, softThreshold, hardThreshold, 95);
+		AdaptiveImpactPreviewLabel.Text = $"Adaptive preview: At ~85% CPU expect ~{previewAt85} active slots; at ~95% CPU expect ~{previewAt95}.";
+	}
+
+	private static int PredictConcurrencyAtCpu(int maxConcurrency, int softThreshold, int hardThreshold, int cpuPercent)
+	{
+		if (cpuPercent <= softThreshold)
+		{
+			return Math.Max(1, maxConcurrency);
+		}
+
+		if (cpuPercent >= hardThreshold)
+		{
+			return Math.Max(1, maxConcurrency / 2);
+		}
+
+		var ratio = (cpuPercent - softThreshold) / (double)Math.Max(1, hardThreshold - softThreshold);
+		var reduced = maxConcurrency - (int)Math.Round((maxConcurrency - 1) * ratio);
+		return Math.Max(1, reduced);
 	}
 
 	private void UpdateProfileLabels()

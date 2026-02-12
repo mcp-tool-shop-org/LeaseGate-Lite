@@ -360,21 +360,40 @@
                    FontSize="18"
                    FontAttributes="Bold" />
                      <Label Text="Set base concurrency and reserved capacity behavior." />
+                <Label Text="Lower concurrency = steadier performance; higher concurrency = more throughput with more heat risk."
+                       FontSize="12" />
                 <Label x:Name="MaxConcurrencyLabel" />
+                <Label Text="How many total AI calls can run in parallel under normal conditions."
+                       FontSize="12" />
                 <Slider x:Name="MaxConcurrencySlider"
                     Minimum="1"
                     Maximum="32"
                     ValueChanged="OnConfigChanged" />
+                <Grid HeightRequest="3" ColumnDefinitions="0.1*,0.4*,0.5*">
+                    <BoxView Grid.Column="1" BackgroundColor="{AppThemeBinding Light=#B8C1CC, Dark=#505A66}" Opacity="0.45" />
+                </Grid>
+                <Label Text="Recommended range: 4–16 for most home PCs."
+                       FontSize="11" />
                 <Label x:Name="InteractiveReserveLabel" />
+                <Label Text="Keeps foreground interactions responsive by reserving slots."
+                       FontSize="12" />
                 <Slider x:Name="InteractiveReserveSlider"
                     Minimum="0"
                     Maximum="16"
                     ValueChanged="OnConfigChanged" />
+                <Grid HeightRequest="3" ColumnDefinitions="0.08*,0.2*,0.72*">
+                    <BoxView Grid.Column="1" BackgroundColor="{AppThemeBinding Light=#B8C1CC, Dark=#505A66}" Opacity="0.45" />
+                </Grid>
                 <Label x:Name="BackgroundCapLabel" />
+                <Label Text="Limits background work so your active app stays smooth."
+                       FontSize="12" />
                 <Slider x:Name="BackgroundCapSlider"
                     Minimum="0"
                     Maximum="32"
                     ValueChanged="OnConfigChanged" />
+                <Grid HeightRequest="3" ColumnDefinitions="0.1*,0.45*,0.45*">
+                    <BoxView Grid.Column="1" BackgroundColor="{AppThemeBinding Light=#B8C1CC, Dark=#505A66}" Opacity="0.45" />
+                </Grid>
                 <HorizontalStackLayout Spacing="8">
                 <Label Text="Cool-down" />
                 <Picker x:Name="CooldownBehaviorPicker"
@@ -382,8 +401,13 @@
                     ItemsSource="{StaticResource CooldownModes}"
                     SelectedIndexChanged="OnConfigChanged" />
                 </HorizontalStackLayout>
+                <Label Text="When pressure gets high, cooldown reduces active work to recover faster."
+                       FontSize="12" />
                 <Label x:Name="EffectiveConcurrencyPreviewLabel"
                    FontFamily="OpenSansSemibold" />
+                <Label x:Name="ConcurrencyImpactPreviewLabel"
+                       FontSize="12"
+                       FontFamily="OpenSansSemibold" />
                 <Label Text="✅ Covered by: C) Core throttling controls"
                    FontSize="12" />
             </VerticalStackLayout>
@@ -398,26 +422,51 @@
                    FontSize="18"
                    FontAttributes="Bold" />
                      <Label Text="Tune soft/hard clamp transitions and recovery smoothing." />
+                <Label Text="Lower thresholds clamp earlier; higher thresholds favor throughput over smoothness."
+                       FontSize="12" />
                 <Label x:Name="SoftThresholdLabel" />
+                <Label Text="Pressure point where gentle reductions begin."
+                       FontSize="12" />
                 <Slider x:Name="SoftThresholdSlider"
                     Minimum="40"
                     Maximum="95"
                     ValueChanged="OnConfigChanged" />
+                <Grid HeightRequest="3" ColumnDefinitions="0.35*,0.35*,0.3*">
+                    <BoxView Grid.Column="1" BackgroundColor="{AppThemeBinding Light=#B8C1CC, Dark=#505A66}" Opacity="0.45" />
+                </Grid>
                 <Label x:Name="HardThresholdLabel" />
+                <Label Text="Pressure point where stronger emergency clamping starts."
+                       FontSize="12" />
                 <Slider x:Name="HardThresholdSlider"
                     Minimum="50"
                     Maximum="99"
                     ValueChanged="OnConfigChanged" />
+                <Grid HeightRequest="3" ColumnDefinitions="0.4*,0.35*,0.25*">
+                    <BoxView Grid.Column="1" BackgroundColor="{AppThemeBinding Light=#B8C1CC, Dark=#505A66}" Opacity="0.45" />
+                </Grid>
                 <Label x:Name="RecoveryRateLabel" />
+                <Label Text="How quickly limits relax after pressure falls."
+                       FontSize="12" />
                 <Slider x:Name="RecoveryRateSlider"
                     Minimum="5"
                     Maximum="100"
                     ValueChanged="OnConfigChanged" />
+                <Grid HeightRequest="3" ColumnDefinitions="0.15*,0.35*,0.5*">
+                    <BoxView Grid.Column="1" BackgroundColor="{AppThemeBinding Light=#B8C1CC, Dark=#505A66}" Opacity="0.45" />
+                </Grid>
                 <Label x:Name="SmoothingLabel" />
+                <Label Text="Higher smoothing means fewer abrupt clamp swings."
+                       FontSize="12" />
                 <Slider x:Name="SmoothingSlider"
                     Minimum="5"
                     Maximum="95"
                     ValueChanged="OnConfigChanged" />
+                <Grid HeightRequest="3" ColumnDefinitions="0.2*,0.4*,0.4*">
+                    <BoxView Grid.Column="1" BackgroundColor="{AppThemeBinding Light=#B8C1CC, Dark=#505A66}" Opacity="0.45" />
+                </Grid>
+                <Label x:Name="AdaptiveImpactPreviewLabel"
+                       FontSize="12"
+                       FontFamily="OpenSansSemibold" />
                 <Label Text="✅ Covered by: D) Adaptive throttle tuning"
                    FontSize="12" />
             </VerticalStackLayout>
