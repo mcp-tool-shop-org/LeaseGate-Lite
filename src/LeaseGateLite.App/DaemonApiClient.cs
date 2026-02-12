@@ -58,9 +58,9 @@ public sealed class DaemonApiClient
         return await response.Content.ReadFromJsonAsync<ServiceCommandResponse>(cancellationToken);
     }
 
-    public async Task<DiagnosticsExportResponse?> ExportDiagnosticsAsync(CancellationToken cancellationToken)
+    public async Task<DiagnosticsExportResponse?> ExportDiagnosticsAsync(bool includePaths, CancellationToken cancellationToken)
     {
-        var response = await _httpClient.PostAsync("/diagnostics/export", null, cancellationToken);
+        var response = await _httpClient.PostAsync($"/diagnostics/export?includePaths={includePaths.ToString().ToLowerInvariant()}", null, cancellationToken);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<DiagnosticsExportResponse>(cancellationToken);
     }

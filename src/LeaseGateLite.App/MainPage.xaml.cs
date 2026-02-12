@@ -590,7 +590,7 @@ public partial class MainPage : ContentPage
 
 	private async void OnExportDiagnosticsClicked(object? sender, EventArgs e)
 	{
-		var response = await _daemonApiClient.ExportDiagnosticsAsync(CancellationToken.None);
+		var response = await _daemonApiClient.ExportDiagnosticsAsync(IncludePathsSwitch.IsToggled, CancellationToken.None);
 		DiagnosticsPathLabel.Text = response is null ? "Diagnostics export failed." : $"Exported: {response.OutputPath} ({response.BytesWritten} bytes)";
 		await RefreshStatusAndEventsAsync();
 	}
@@ -602,7 +602,7 @@ public partial class MainPage : ContentPage
 			return;
 		}
 
-		var summary = $"Heat={_latestStatus.HeatState}; Active={_latestStatus.ActiveCalls}; Queue={_latestStatus.InteractiveQueueDepth}/{_latestStatus.BackgroundQueueDepth}; EffectiveConcurrency={_latestStatus.EffectiveConcurrency}; CPU={_latestStatus.CpuPercent}%; RAM={_latestStatus.AvailableRamPercent}%; Reason={_latestStatus.LastThrottleReason}";
+		var summary = $"Time={DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss}; Heat={_latestStatus.HeatState}; Active={_latestStatus.ActiveCalls}; Queue={_latestStatus.InteractiveQueueDepth}/{_latestStatus.BackgroundQueueDepth}; EffectiveConcurrency={_latestStatus.EffectiveConcurrency}; CPU={_latestStatus.CpuPercent}%; RAM={_latestStatus.AvailableRamPercent}%; Reason={_latestStatus.LastThrottleReason}; Degraded={_latestStatus.DegradedMode}";
 		await Clipboard.Default.SetTextAsync(summary);
 		DiagnosticsPathLabel.Text = "Status summary copied to clipboard.";
 	}
@@ -829,7 +829,7 @@ public partial class MainPage : ContentPage
 			await _daemonApiClient.SetPressureModeAsync(PressureMode.Normal, CancellationToken.None);
 			await _daemonApiClient.ApplyConfigAsync(original, CancellationToken.None);
 
-			var diag = await _daemonApiClient.ExportDiagnosticsAsync(CancellationToken.None);
+			var diag = await _daemonApiClient.ExportDiagnosticsAsync(false, CancellationToken.None);
 			Record("export diagnostics", diag?.Exported == true, diag?.OutputPath ?? "no output path");
 
 			await RefreshStatusAndEventsAsync();

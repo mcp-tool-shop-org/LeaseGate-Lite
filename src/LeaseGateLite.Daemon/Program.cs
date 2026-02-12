@@ -109,7 +109,7 @@ app.MapPost("/autostart", (AutostartUpdateRequest request) =>
     return result.Success ? Results.Ok(result) : Results.BadRequest(result);
 });
 
-app.MapPost("/diagnostics/export", (DaemonState daemon) => Results.Ok(daemon.ExportDiagnostics()));
+app.MapPost("/diagnostics/export", (bool? includePaths, DaemonState daemon) => Results.Ok(daemon.ExportDiagnostics(includePaths ?? false)));
 
 app.MapGet("/events/tail", (int? n, DaemonState daemon) => Results.Ok(daemon.GetEvents(n ?? 200)));
 

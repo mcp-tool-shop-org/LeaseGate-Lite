@@ -518,6 +518,11 @@
                     <Button Text="Copy last 50"
                         Clicked="OnCopyLast50Clicked" />
                 </HorizontalStackLayout>
+                <HorizontalStackLayout Spacing="8">
+                    <Label Text="Include file paths in support bundle"
+                           VerticalOptions="Center" />
+                    <Switch x:Name="IncludePathsSwitch" />
+                </HorizontalStackLayout>
                     <HorizontalStackLayout Spacing="12">
                     <HorizontalStackLayout Spacing="4">
                         <Switch x:Name="FilterLeaseSwitch"

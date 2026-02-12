@@ -1,3 +1,5 @@
+using System.IO.Compression;
+using System.Text.RegularExpressions;
 using System.Text.Json;
 using LeaseGateLite.Contracts;
 
@@ -15,6 +17,7 @@ public sealed class DaemonState
     private readonly Dictionary<string, SeenClient> _recentClients = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, AppProfileOverride> _profileOverrides = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, (int Interactive, int Background)> _appDemands = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<StatusSampleEntry> _statusSamples = new();
     private LiteConfig _config;
     private bool _running;
     private DateTimeOffset _startedAtUtc;
@@ -30,6 +33,7 @@ public sealed class DaemonState
     private long _nextEventId = 1;
     private DateTimeOffset _lastPressureSampleUtc = DateTimeOffset.MinValue;
     private DateTimeOffset _lastLeaseSignalUtc = DateTimeOffset.MinValue;
+    private DateTimeOffset _lastStatusSampleUtc = DateTimeOffset.MinValue;
     private bool _lastClampState;
     private double _smoothedPressure;
     private int _interactiveDemand;
@@ -61,29 +65,7 @@ public sealed class DaemonState
         lock (_lock)
         {
             SimulateTick();
-
-            return new StatusSnapshot
-            {
-                Connected = true,
-                DaemonRunning = _running,
-                DaemonVersion = "0.2.0-lite",
-                Uptime = _running ? DateTimeOffset.UtcNow - _startedAtUtc : TimeSpan.Zero,
-                Endpoint = "http://localhost:5177",
-                ConfigFilePath = _configPath,
-                HeatState = DeriveHeatState(),
-                ActiveCalls = _activeCalls,
-                InteractiveQueueDepth = _interactiveQueueDepth,
-                BackgroundQueueDepth = _backgroundQueueDepth,
-                EffectiveConcurrency = _effectiveConcurrency,
-                CpuPercent = _cpuPercent,
-                AvailableRamPercent = _availableRamPercent,
-                LastThrottleReason = _lastThrottleReason,
-                AdaptiveClampActive = _adaptiveClampActive,
-                PressureMode = _pressureMode,
-                DegradedMode = _degradedMode,
-                DegradedReason = _degradedReason,
-                BackgroundPaused = _backgroundPaused
-            };
+            return BuildStatusSnapshot();
         }
     }
 
@@ -388,32 +370,67 @@ public sealed class DaemonState
         }
     }
 
-    public DiagnosticsExportResponse ExportDiagnostics()
+    public DiagnosticsExportResponse ExportDiagnostics(bool includePaths)
     {
         lock (_lock)
         {
             var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss");
-            var outputPath = Path.Combine(_diagnosticsDirectory, $"leasegatelite-diagnostics-{timestamp}.json");
+            var bundleDirectory = Path.Combine(_diagnosticsDirectory, $"leasegatelite-support-{timestamp}");
+            Directory.CreateDirectory(bundleDirectory);
+
+            var outputPath = Path.Combine(_diagnosticsDirectory, $"leasegatelite-support-{timestamp}.zip");
+            var redactedConfigPath = includePaths ? _configPath : Path.GetFileName(_configPath);
+
             var payload = new
             {
                 generatedAtUtc = DateTimeOffset.UtcNow,
-                status = GetStatus(),
+                status = BuildStatusSnapshot(),
                 config = _config,
-                events = _events.TakeLast(200).ToList()
+                profiles = _profileOverrides.Values.OrderBy(v => v.ClientAppId).ToList(),
+                events = _events.TakeLast(400).Select(e => new EventEntry
+                {
+                    Id = e.Id,
+                    TimestampUtc = e.TimestampUtc,
+                    Category = e.Category,
+                    Level = e.Level,
+                    Message = RedactSensitiveText(e.Message),
+                    Detail = RedactSensitiveText(e.Detail, includePaths)
+                }).ToList(),
+                statusSamples = _statusSamples.TakeLast(300).ToList(),
+                environment = new
+                {
+                    osVersion = Environment.OSVersion.ToString(),
+                    cpuCount = Environment.ProcessorCount,
+                    totalMemoryBytes = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes,
+                    configPath = redactedConfigPath
+                },
+                redaction = new
+                {
+                    includePaths,
+                    promptTextIncluded = false
+                }
             };
 
             var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(outputPath, json);
+            File.WriteAllText(Path.Combine(bundleDirectory, "bundle.json"), json);
+
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+
+            ZipFile.CreateFromDirectory(bundleDirectory, outputPath);
+            Directory.Delete(bundleDirectory, true);
 
             var bytes = new FileInfo(outputPath).Length;
-            AddEvent(EventCategory.Diagnostics, "info", "diagnostics exported", outputPath);
+            AddEvent(EventCategory.Diagnostics, "info", "support bundle exported", outputPath);
 
             return new DiagnosticsExportResponse
             {
                 Exported = true,
                 OutputPath = outputPath,
                 BytesWritten = bytes,
-                Message = "diagnostics exported"
+                Message = "support bundle exported"
             };
         }
     }
@@ -659,6 +676,35 @@ public sealed class DaemonState
         EmitPressureSample((int)Math.Round(_smoothedPressure));
         EmitLeaseSignals();
         EmitClampTransitions();
+        CaptureStatusSample();
+    }
+
+    private void CaptureStatusSample()
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (now - _lastStatusSampleUtc < TimeSpan.FromSeconds(1))
+        {
+            return;
+        }
+
+        _lastStatusSampleUtc = now;
+        _statusSamples.Add(new StatusSampleEntry
+        {
+            TimestampUtc = now,
+            HeatState = DeriveHeatState(),
+            EffectiveConcurrency = _effectiveConcurrency,
+            ActiveCalls = _activeCalls,
+            InteractiveQueueDepth = _interactiveQueueDepth,
+            BackgroundQueueDepth = _backgroundQueueDepth,
+            CpuPercent = _cpuPercent,
+            AvailableRamPercent = _availableRamPercent,
+            LastThrottleReason = _lastThrottleReason
+        });
+
+        if (_statusSamples.Count > 2000)
+        {
+            _statusSamples.RemoveRange(0, _statusSamples.Count - 2000);
+        }
     }
 
     private void EmitPressureSample(int pressure)
@@ -922,5 +968,49 @@ public sealed class DaemonState
 
         File.AppendAllText(_eventLogPath, JsonSerializer.Serialize(entry) + Environment.NewLine);
         Monitor.PulseAll(_lock);
+    }
+
+    private StatusSnapshot BuildStatusSnapshot()
+    {
+        return new StatusSnapshot
+        {
+            Connected = true,
+            DaemonRunning = _running,
+            DaemonVersion = "0.2.0-lite",
+            Uptime = _running ? DateTimeOffset.UtcNow - _startedAtUtc : TimeSpan.Zero,
+            Endpoint = "http://localhost:5177",
+            ConfigFilePath = _configPath,
+            HeatState = DeriveHeatState(),
+            ActiveCalls = _activeCalls,
+            InteractiveQueueDepth = _interactiveQueueDepth,
+            BackgroundQueueDepth = _backgroundQueueDepth,
+            EffectiveConcurrency = _effectiveConcurrency,
+            CpuPercent = _cpuPercent,
+            AvailableRamPercent = _availableRamPercent,
+            LastThrottleReason = _lastThrottleReason,
+            AdaptiveClampActive = _adaptiveClampActive,
+            PressureMode = _pressureMode,
+            DegradedMode = _degradedMode,
+            DegradedReason = _degradedReason,
+            BackgroundPaused = _backgroundPaused
+        };
+    }
+
+    private static string RedactSensitiveText(string input, bool includePaths = false)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return string.Empty;
+        }
+
+        var redacted = Regex.Replace(input, "prompt\\s*[:=].*", "prompt=[REDACTED]", RegexOptions.IgnoreCase);
+
+        if (!includePaths)
+        {
+            redacted = Regex.Replace(redacted, @"[A-Za-z]:\\[^\""\r\n]*", "[PATH]", RegexOptions.Compiled);
+            redacted = Regex.Replace(redacted, @"/[^\s]+", "[PATH]", RegexOptions.Compiled);
+        }
+
+        return redacted;
     }
 }

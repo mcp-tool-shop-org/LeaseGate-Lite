@@ -28,3 +28,16 @@ public sealed class DiagnosticsExportResponse
     public long BytesWritten { get; set; }
     public string Message { get; set; } = string.Empty;
 }
+
+public sealed class StatusSampleEntry
+{
+    public DateTimeOffset TimestampUtc { get; set; }
+    public HeatState HeatState { get; set; } = HeatState.Calm;
+    public int EffectiveConcurrency { get; set; }
+    public int ActiveCalls { get; set; }
+    public int InteractiveQueueDepth { get; set; }
+    public int BackgroundQueueDepth { get; set; }
+    public int CpuPercent { get; set; }
+    public int AvailableRamPercent { get; set; }
+    public ThrottleReason LastThrottleReason { get; set; } = ThrottleReason.None;
+}
