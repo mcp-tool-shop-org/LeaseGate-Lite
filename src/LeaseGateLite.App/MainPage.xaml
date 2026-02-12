@@ -407,6 +407,8 @@
                   <Button x:Name="WhyThrottledButton"
                        Text="Why am I throttled?"
                        Clicked="OnToggleThrottleReasonsClicked" />
+                  <Label Text="Here's what I'm doing and why."
+                      FontSize="12" />
                   <Label x:Name="ThrottleReasonsLabel"
                       IsVisible="False"
                       FontSize="12" />
@@ -436,7 +438,10 @@
                      <Label Text="Set base concurrency and reserved capacity behavior." />
                 <Label Text="Lower concurrency = steadier performance; higher concurrency = more throughput with more heat risk."
                        FontSize="12" />
-                <Label x:Name="MaxConcurrencyLabel" />
+                <HorizontalStackLayout Spacing="6">
+                    <Label x:Name="MaxConcurrencyLabel" VerticalOptions="Center" />
+                    <Button Text="?" WidthRequest="28" HeightRequest="28" Padding="0" CommandParameter="MaxConcurrency" Clicked="OnInlineHelpClicked" />
+                </HorizontalStackLayout>
                 <Label Text="How many total AI calls can run in parallel under normal conditions."
                        FontSize="12" />
                 <Slider x:Name="MaxConcurrencySlider"
@@ -448,7 +453,10 @@
                 </Grid>
                 <Label Text="Recommended range: 4–16 for most home PCs."
                        FontSize="11" />
-                <Label x:Name="InteractiveReserveLabel" />
+                <HorizontalStackLayout Spacing="6">
+                    <Label x:Name="InteractiveReserveLabel" VerticalOptions="Center" />
+                    <Button Text="?" WidthRequest="28" HeightRequest="28" Padding="0" CommandParameter="InteractiveReserve" Clicked="OnInlineHelpClicked" />
+                </HorizontalStackLayout>
                 <Label Text="Keeps foreground interactions responsive by reserving slots."
                        FontSize="12" />
                 <Slider x:Name="InteractiveReserveSlider"
@@ -498,7 +506,10 @@
                      <Label Text="Tune soft/hard clamp transitions and recovery smoothing." />
                 <Label Text="Lower thresholds clamp earlier; higher thresholds favor throughput over smoothness."
                        FontSize="12" />
-                <Label x:Name="SoftThresholdLabel" />
+                <HorizontalStackLayout Spacing="6">
+                    <Label x:Name="SoftThresholdLabel" VerticalOptions="Center" />
+                    <Button Text="?" WidthRequest="28" HeightRequest="28" Padding="0" CommandParameter="SoftThreshold" Clicked="OnInlineHelpClicked" />
+                </HorizontalStackLayout>
                 <Label Text="Pressure point where gentle reductions begin."
                        FontSize="12" />
                 <Slider x:Name="SoftThresholdSlider"
@@ -508,7 +519,10 @@
                 <Grid HeightRequest="3" ColumnDefinitions="0.35*,0.35*,0.3*">
                     <BoxView Grid.Column="1" BackgroundColor="{AppThemeBinding Light=#B8C1CC, Dark=#505A66}" Opacity="0.45" />
                 </Grid>
-                <Label x:Name="HardThresholdLabel" />
+                <HorizontalStackLayout Spacing="6">
+                    <Label x:Name="HardThresholdLabel" VerticalOptions="Center" />
+                    <Button Text="?" WidthRequest="28" HeightRequest="28" Padding="0" CommandParameter="HardThreshold" Clicked="OnInlineHelpClicked" />
+                </HorizontalStackLayout>
                 <Label Text="Pressure point where stronger emergency clamping starts."
                        FontSize="12" />
                 <Slider x:Name="HardThresholdSlider"
@@ -555,7 +569,10 @@
                    FontSize="18"
                    FontAttributes="Bold" />
                      <Label Text="Bound prompt/output size and define overflow and retry behavior." />
-                <Label x:Name="MaxOutputTokensLabel" />
+                <HorizontalStackLayout Spacing="6">
+                    <Label x:Name="MaxOutputTokensLabel" VerticalOptions="Center" />
+                    <Button Text="?" WidthRequest="28" HeightRequest="28" Padding="0" CommandParameter="OutputCap" Clicked="OnInlineHelpClicked" />
+                </HorizontalStackLayout>
                 <Slider x:Name="MaxOutputTokensSlider"
                     Minimum="64"
                     Maximum="4096"
@@ -624,6 +641,7 @@
                 <Label Text="Presets"
                    FontSize="18"
                    FontAttributes="Bold" />
+                                <Button Text="?" WidthRequest="28" HeightRequest="28" Padding="0" CommandParameter="Presets" Clicked="OnInlineHelpClicked" HorizontalOptions="Start" />
                      <Label Text="Apply and persist practical local operating profiles." />
                 <HorizontalStackLayout Spacing="8">
                 <Button Text="Quiet (Laptop)"

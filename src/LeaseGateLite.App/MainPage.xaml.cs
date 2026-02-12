@@ -392,7 +392,7 @@ public partial class MainPage : ContentPage
 			.Select(item =>
 			{
 				var target = GetControlTargetForReason(item.Reason);
-				var text = $"{item.TimestampUtc:HH:mm:ss} — {BuildFriendlyThrottleSentence(item.Reason)}";
+				var text = $"{item.TimestampUtc:HH:mm:ss} — {BuildFriendlyThrottleSentence(item.Reason)} Recommended action: {GetRecommendedAction(item.Reason)}";
 				return (text, target);
 			})
 			.ToList();
@@ -440,6 +440,19 @@ public partial class MainPage : ContentPage
 			ThrottleReason.RateLimit => "RateLimits",
 			ThrottleReason.ManualClamp => "Concurrency",
 			_ => "LiveStatus"
+		};
+	}
+
+	private static string GetRecommendedAction(ThrottleReason reason)
+	{
+		return reason switch
+		{
+			ThrottleReason.CpuPressure => "Lower max concurrency or switch to Quiet.",
+			ThrottleReason.MemoryPressure => "Lower output cap or increase queue-only behavior.",
+			ThrottleReason.Cooldown => "Use a lower hard threshold or stronger cooldown.",
+			ThrottleReason.RateLimit => "Increase request/token limits if your system stays cool.",
+			ThrottleReason.ManualClamp => "Review manual pause/clamp settings.",
+			_ => "No action needed right now."
 		};
 	}
 
@@ -684,6 +697,27 @@ public partial class MainPage : ContentPage
 		}
 
 		await ControlScroll.ScrollToAsync(card, ScrollToPosition.Start, true);
+	}
+
+	private async void OnInlineHelpClicked(object? sender, EventArgs e)
+	{
+		if (sender is not Button button || button.CommandParameter is not string key)
+		{
+			return;
+		}
+
+		var (title, message) = key switch
+		{
+			"MaxConcurrency" => ("Max concurrency", "Sets your top parallel AI calls. Lower means steadier performance; higher means more throughput and heat."),
+			"InteractiveReserve" => ("Interactive reserve", "Keeps slots free for foreground work so the UI stays responsive while background jobs run."),
+			"SoftThreshold" => ("Soft threshold", "Where gentle throttling starts. Lower values smooth earlier; higher values push harder before clamping."),
+			"HardThreshold" => ("Hard threshold", "Where strong protection kicks in. If this hits often, reduce concurrency or use Quiet preset."),
+			"OutputCap" => ("Output cap", "Caps response size to reduce memory pressure and keep latency predictable."),
+			"Presets" => ("Presets", "Quiet favors thermals, Balanced is the safe default, and Performance prioritizes throughput."),
+			_ => ("Help", "No contextual help is available for this control.")
+		};
+
+		await DisplayAlertAsync(title, message, "Got it");
 	}
 
 	private void OnRecentAppChanged(object? sender, EventArgs e)
