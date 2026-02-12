@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.jpg" alt="LeaseGate-Lite" width="500">
+</p>
+
 # LeaseGate-Lite
 
 LeaseGate-Lite is a one-tab MAUI control surface plus a lightweight local daemon.
