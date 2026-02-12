@@ -28,6 +28,9 @@ public sealed class DaemonState
     private DateTimeOffset _lastPressureSampleUtc = DateTimeOffset.MinValue;
     private DateTimeOffset _lastLeaseSignalUtc = DateTimeOffset.MinValue;
     private bool _lastClampState;
+    private double _smoothedPressure;
+    private int _interactiveDemand;
+    private int _backgroundDemand;
 
     public DaemonState()
     {
@@ -42,6 +45,7 @@ public sealed class DaemonState
         _running = true;
         _startedAtUtc = DateTimeOffset.UtcNow;
         _effectiveConcurrency = _config.MaxConcurrency;
+        _smoothedPressure = 45;
 
         AddEvent(EventCategory.Service, "info", "daemon started", "startup");
     }
@@ -403,22 +407,22 @@ public sealed class DaemonState
             _availableRamPercent = _random.Next(35, 80);
         }
 
-        _activeCalls = Math.Clamp(_activeCalls + _random.Next(-2, 3), 0, _config.MaxConcurrency + 8);
-        _interactiveQueueDepth = Math.Clamp(_interactiveQueueDepth + _random.Next(-2, 3), 0, 25);
-        _backgroundQueueDepth = Math.Clamp(_backgroundQueueDepth + _random.Next(-2, 4), 0, 40);
+        _interactiveDemand = Math.Clamp(_interactiveDemand + _random.Next(-2, 4), 0, 24);
+        _backgroundDemand = Math.Clamp(_backgroundDemand + _random.Next(-2, 5), 0, 40);
 
-        var pressure = Math.Max(_cpuPercent, 100 - _availableRamPercent);
+        var rawPressure = Math.Max(_cpuPercent, 100 - _availableRamPercent);
+        var alpha = 0.05 + ((100 - Math.Clamp(_config.SmoothingPercent, 5, 95)) / 100.0) * 0.55;
+        _smoothedPressure = (_smoothedPressure * (1 - alpha)) + (rawPressure * alpha);
+
+        var soft = _config.SoftThresholdPercent;
+        var hard = _config.HardThresholdPercent;
         var target = _config.MaxConcurrency;
 
-        if (pressure >= _config.HardThresholdPercent)
+        if (_smoothedPressure > soft)
         {
-            target = Math.Max(1, _config.MaxConcurrency / 2);
-            _adaptiveClampActive = true;
-            _lastThrottleReason = _cpuPercent >= (100 - _availableRamPercent) ? ThrottleReason.CpuPressure : ThrottleReason.MemoryPressure;
-        }
-        else if (pressure >= _config.SoftThresholdPercent)
-        {
-            target = Math.Max(1, _config.MaxConcurrency - Math.Max(1, _config.MaxConcurrency / 3));
+            var ratio = Math.Clamp((_smoothedPressure - soft) / Math.Max(1.0, hard - soft), 0.0, 1.0);
+            var reduction = (int)Math.Round((target - 1) * ratio);
+            target = Math.Max(1, target - reduction);
             _adaptiveClampActive = true;
             _lastThrottleReason = _cpuPercent >= (100 - _availableRamPercent) ? ThrottleReason.CpuPressure : ThrottleReason.MemoryPressure;
         }
@@ -428,11 +432,36 @@ public sealed class DaemonState
             _lastThrottleReason = ThrottleReason.None;
         }
 
-        var smoothingFactor = Math.Clamp(_config.SmoothingPercent, 5, 95) / 100.0;
-        _effectiveConcurrency = (int)Math.Round((_effectiveConcurrency * smoothingFactor) + (target * (1.0 - smoothingFactor)));
+        if (_smoothedPressure >= hard)
+        {
+            if (_config.CooldownBehavior != CooldownBehavior.Off)
+            {
+                target = Math.Max(1, Math.Min(target, _config.InteractiveReserve + 1));
+                _lastThrottleReason = ThrottleReason.Cooldown;
+            }
+        }
+
+        if (_config.RequestsPerMinute < 30)
+        {
+            target = Math.Max(1, Math.Min(target, _config.MaxConcurrency / 2));
+            _lastThrottleReason = ThrottleReason.RateLimit;
+        }
+
+        var recoverLerp = Math.Clamp(_config.RecoveryRatePercent, 5, 100) / 100.0;
+        _effectiveConcurrency = (int)Math.Round((_effectiveConcurrency * (1 - recoverLerp)) + (target * recoverLerp));
         _effectiveConcurrency = Math.Clamp(_effectiveConcurrency, _running ? 1 : 0, _config.MaxConcurrency);
 
-        EmitPressureSample(pressure);
+        var reservedInteractive = Math.Min(_config.InteractiveReserve, _effectiveConcurrency);
+        var availableForBackground = Math.Max(0, Math.Min(_config.BackgroundCap, _effectiveConcurrency - reservedInteractive));
+
+        var activeInteractive = Math.Min(_interactiveDemand, Math.Max(1, reservedInteractive));
+        var activeBackground = Math.Min(_backgroundDemand, availableForBackground);
+
+        _activeCalls = activeInteractive + activeBackground;
+        _interactiveQueueDepth = Math.Max(0, _interactiveDemand - activeInteractive);
+        _backgroundQueueDepth = Math.Max(0, _backgroundDemand - activeBackground);
+
+        EmitPressureSample((int)Math.Round(_smoothedPressure));
         EmitLeaseSignals();
         EmitClampTransitions();
     }
@@ -499,7 +528,7 @@ public sealed class DaemonState
 
     private HeatState DeriveHeatState()
     {
-        var pressure = Math.Max(_cpuPercent, 100 - _availableRamPercent);
+        var pressure = _smoothedPressure;
         if (pressure >= _config.HardThresholdPercent)
         {
             return HeatState.Spicy;
