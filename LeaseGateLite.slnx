@@ -5,4 +5,7 @@
     <Project Path="src/LeaseGateLite.Daemon/LeaseGateLite.Daemon.csproj" />
     <Project Path="src/LeaseGateLite.Tray/LeaseGateLite.Tray.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LeaseGateLite.Tests/LeaseGateLite.Tests.csproj" />
+  </Folder>
 </Solution>
