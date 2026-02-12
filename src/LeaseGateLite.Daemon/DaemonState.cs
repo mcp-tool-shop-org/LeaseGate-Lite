@@ -33,6 +33,7 @@ public sealed class DaemonState
     private int _backgroundDemand;
     private bool _degradedMode;
     private string _degradedReason = string.Empty;
+    private bool _backgroundPaused;
 
     public DaemonState()
     {
@@ -77,7 +78,8 @@ public sealed class DaemonState
                 AdaptiveClampActive = _adaptiveClampActive,
                 PressureMode = _pressureMode,
                 DegradedMode = _degradedMode,
-                DegradedReason = _degradedReason
+                DegradedReason = _degradedReason,
+                BackgroundPaused = _backgroundPaused
             };
         }
     }
@@ -317,6 +319,20 @@ public sealed class DaemonState
         }
     }
 
+    public ServiceCommandResponse SetBackgroundPause(bool paused)
+    {
+        lock (_lock)
+        {
+            _backgroundPaused = paused;
+            AddEvent(EventCategory.Service, paused ? "warn" : "info", paused ? "background work paused" : "background work resumed", "soft stop");
+            return new ServiceCommandResponse
+            {
+                Success = true,
+                Message = paused ? "background work paused" : "background work resumed"
+            };
+        }
+    }
+
     public void NotifyHostStopping()
     {
         lock (_lock)
@@ -514,6 +530,11 @@ public sealed class DaemonState
 
         var reservedInteractive = Math.Min(_config.InteractiveReserve, _effectiveConcurrency);
         var availableForBackground = Math.Max(0, Math.Min(_config.BackgroundCap, _effectiveConcurrency - reservedInteractive));
+        if (_backgroundPaused)
+        {
+            availableForBackground = 0;
+            _lastThrottleReason = ThrottleReason.ManualClamp;
+        }
 
         var activeInteractive = Math.Min(_interactiveDemand, Math.Max(1, reservedInteractive));
         var activeBackground = Math.Min(_backgroundDemand, availableForBackground);

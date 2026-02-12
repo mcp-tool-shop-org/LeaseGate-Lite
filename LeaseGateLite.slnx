@@ -3,5 +3,6 @@
     <Project Path="src/LeaseGateLite.App/LeaseGateLite.App.csproj" />
     <Project Path="src/LeaseGateLite.Contracts/LeaseGateLite.Contracts.csproj" />
     <Project Path="src/LeaseGateLite.Daemon/LeaseGateLite.Daemon.csproj" />
+    <Project Path="src/LeaseGateLite.Tray/LeaseGateLite.Tray.csproj" />
   </Folder>
 </Solution>

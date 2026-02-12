@@ -82,6 +82,7 @@ app.MapPost("/service/start", (DaemonState daemon) => Results.Ok(daemon.Start())
 app.MapPost("/service/stop", (DaemonState daemon) => Results.Ok(daemon.Stop()));
 
 app.MapPost("/service/restart", (DaemonState daemon) => Results.Ok(daemon.Restart()));
+app.MapPost("/service/pause-background", (bool? paused, DaemonState daemon) => Results.Ok(daemon.SetBackgroundPause(paused ?? true)));
 
 app.MapPost("/service/exit", (DaemonState daemon, IHostApplicationLifetime hostLifetime) =>
 {

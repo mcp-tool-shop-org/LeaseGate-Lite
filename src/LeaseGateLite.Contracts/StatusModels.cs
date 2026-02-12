@@ -20,6 +20,7 @@ public sealed class StatusSnapshot
     public PressureMode PressureMode { get; set; } = PressureMode.Normal;
     public bool DegradedMode { get; set; }
     public string DegradedReason { get; set; } = string.Empty;
+    public bool BackgroundPaused { get; set; }
 }
 
 public sealed class AutostartStatusResponse
