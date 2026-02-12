@@ -875,9 +875,23 @@ public partial class MainPage : ContentPage
 
 	private async void OnExportDiagnosticsClicked(object? sender, EventArgs e)
 	{
-		var response = await _daemonApiClient.ExportDiagnosticsAsync(IncludePathsSwitch.IsToggled, CancellationToken.None);
+		var response = await _daemonApiClient.ExportDiagnosticsAsync(IncludePathsSwitch.IsToggled, IncludeVerboseSwitch.IsToggled, CancellationToken.None);
 		DiagnosticsPathLabel.Text = response is null ? "Diagnostics export failed." : $"Exported: {response.OutputPath} ({response.BytesWritten} bytes)";
 		await RefreshStatusAndEventsAsync();
+	}
+
+	private async void OnPreviewDiagnosticsClicked(object? sender, EventArgs e)
+	{
+		var preview = await _daemonApiClient.GetDiagnosticsPreviewAsync(IncludePathsSwitch.IsToggled, IncludeVerboseSwitch.IsToggled, CancellationToken.None);
+		if (preview is null)
+		{
+			DiagnosticsPreviewLabel.Text = "Could not load diagnostics preview.";
+			return;
+		}
+
+		var sections = string.Join(", ", preview.IncludedSections);
+		var rules = string.Join(" ", preview.RedactionRules);
+		DiagnosticsPreviewLabel.Text = $"Includes: {sections}. {rules} {preview.Summary}";
 	}
 
 	private async void OnCopySummaryClicked(object? sender, EventArgs e)
@@ -1114,7 +1128,7 @@ public partial class MainPage : ContentPage
 			await _daemonApiClient.SetPressureModeAsync(PressureMode.Normal, CancellationToken.None);
 			await _daemonApiClient.ApplyConfigAsync(original, CancellationToken.None);
 
-			var diag = await _daemonApiClient.ExportDiagnosticsAsync(false, CancellationToken.None);
+			var diag = await _daemonApiClient.ExportDiagnosticsAsync(false, false, CancellationToken.None);
 			Record("export diagnostics", diag?.Exported == true, diag?.OutputPath ?? "no output path");
 
 			await RefreshStatusAndEventsAsync();

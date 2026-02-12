@@ -132,7 +132,8 @@ app.MapPost("/notifications", (NotificationsUpdateRequest request, DaemonState d
     return result.Success ? Results.Ok(result) : Results.BadRequest(result);
 });
 
-app.MapPost("/diagnostics/export", (bool? includePaths, DaemonState daemon) => Results.Ok(daemon.ExportDiagnostics(includePaths ?? false)));
+app.MapPost("/diagnostics/export", (bool? includePaths, bool? includeVerbose, DaemonState daemon) => Results.Ok(daemon.ExportDiagnostics(includePaths ?? false, includeVerbose ?? false)));
+app.MapGet("/diagnostics/preview", (bool? includePaths, bool? includeVerbose, DaemonState daemon) => Results.Ok(daemon.GetDiagnosticsPreview(includePaths ?? false, includeVerbose ?? false)));
 
 app.MapGet("/events/tail", (int? n, DaemonState daemon) => Results.Ok(daemon.GetEvents(n ?? 200)));
 

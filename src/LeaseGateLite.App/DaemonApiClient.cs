@@ -69,11 +69,16 @@ public sealed class DaemonApiClient
         return await response.Content.ReadFromJsonAsync<ServiceCommandResponse>(cancellationToken);
     }
 
-    public async Task<DiagnosticsExportResponse?> ExportDiagnosticsAsync(bool includePaths, CancellationToken cancellationToken)
+    public async Task<DiagnosticsExportResponse?> ExportDiagnosticsAsync(bool includePaths, bool includeVerbose, CancellationToken cancellationToken)
     {
-        var response = await _httpClient.PostAsync($"/diagnostics/export?includePaths={includePaths.ToString().ToLowerInvariant()}", null, cancellationToken);
+        var response = await _httpClient.PostAsync($"/diagnostics/export?includePaths={includePaths.ToString().ToLowerInvariant()}&includeVerbose={includeVerbose.ToString().ToLowerInvariant()}", null, cancellationToken);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<DiagnosticsExportResponse>(cancellationToken);
+    }
+
+    public async Task<DiagnosticsPreviewResponse?> GetDiagnosticsPreviewAsync(bool includePaths, bool includeVerbose, CancellationToken cancellationToken)
+    {
+        return await _httpClient.GetFromJsonAsync<DiagnosticsPreviewResponse>($"/diagnostics/preview?includePaths={includePaths.ToString().ToLowerInvariant()}&includeVerbose={includeVerbose.ToString().ToLowerInvariant()}", cancellationToken);
     }
 
     public async Task<EventTailResponse?> GetEventsAsync(int n, CancellationToken cancellationToken)

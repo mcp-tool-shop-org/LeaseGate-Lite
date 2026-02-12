@@ -29,6 +29,15 @@ public sealed class DiagnosticsExportResponse
     public string Message { get; set; } = string.Empty;
 }
 
+public sealed class DiagnosticsPreviewResponse
+{
+    public bool IncludePaths { get; set; }
+    public bool IncludeVerbose { get; set; }
+    public List<string> IncludedSections { get; set; } = new();
+    public List<string> RedactionRules { get; set; } = new();
+    public string Summary { get; set; } = string.Empty;
+}
+
 public sealed class StatusSampleEntry
 {
     public DateTimeOffset TimestampUtc { get; set; }

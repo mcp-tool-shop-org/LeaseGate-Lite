@@ -406,7 +406,7 @@ public sealed class DaemonState
         }
     }
 
-    public DiagnosticsExportResponse ExportDiagnostics(bool includePaths)
+    public DiagnosticsExportResponse ExportDiagnostics(bool includePaths, bool includeVerbose)
     {
         lock (_lock)
         {
@@ -423,7 +423,7 @@ public sealed class DaemonState
                 status = BuildStatusSnapshot(),
                 config = _config,
                 profiles = _profileOverrides.Values.OrderBy(v => v.ClientAppId).ToList(),
-                events = _events.TakeLast(400).Select(e => new EventEntry
+                events = _events.TakeLast(includeVerbose ? 1000 : 250).Select(e => new EventEntry
                 {
                     Id = e.Id,
                     TimestampUtc = e.TimestampUtc,
@@ -432,7 +432,7 @@ public sealed class DaemonState
                     Message = RedactSensitiveText(e.Message),
                     Detail = RedactSensitiveText(e.Detail, includePaths)
                 }).ToList(),
-                statusSamples = _statusSamples.TakeLast(300).ToList(),
+                statusSamples = _statusSamples.TakeLast(includeVerbose ? 1000 : 120).ToList(),
                 environment = new
                 {
                     osVersion = Environment.OSVersion.ToString(),
@@ -443,6 +443,7 @@ public sealed class DaemonState
                 redaction = new
                 {
                     includePaths,
+                    includeVerbose,
                     promptTextIncluded = false
                 }
             };
@@ -469,6 +470,33 @@ public sealed class DaemonState
                 Message = "support bundle exported"
             };
         }
+    }
+
+    public DiagnosticsPreviewResponse GetDiagnosticsPreview(bool includePaths, bool includeVerbose)
+    {
+        return new DiagnosticsPreviewResponse
+        {
+            IncludePaths = includePaths,
+            IncludeVerbose = includeVerbose,
+            IncludedSections = new List<string>
+            {
+                "status snapshot",
+                "active config",
+                "app profiles",
+                includeVerbose ? "events (up to 1000)" : "events (up to 250)",
+                includeVerbose ? "status samples (up to 1000)" : "status samples (up to 120)",
+                "environment basics (OS, CPU count, total memory)"
+            },
+            RedactionRules = new List<string>
+            {
+                "Prompt text is never exported by default.",
+                includePaths ? "Local paths are included because path export is enabled." : "Local paths are redacted by default.",
+                "Only event summaries are exported; no request bodies are stored."
+            },
+            Summary = includeVerbose
+                ? "Verbose diagnostics adds more event and status history for troubleshooting."
+                : "Standard diagnostics keeps the export small and privacy-first."
+        };
     }
 
     public void RegisterClient(string clientAppId, string processName, string signature)

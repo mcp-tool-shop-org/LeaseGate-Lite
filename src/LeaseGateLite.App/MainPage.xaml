@@ -720,6 +720,28 @@
                    FontSize="18"
                    FontAttributes="Bold" />
                      <Label Text="Export runtime snapshots and inspect recent event evidence." />
+                  <Border StrokeShape="RoundRectangle 10"
+                       Padding="8"
+                       BackgroundColor="{AppThemeBinding Light=#F7F9FC, Dark=#23272E}">
+                      <VerticalStackLayout Spacing="6">
+                       <Label Text="Trust &amp; Privacy"
+                           FontAttributes="Bold" />
+                       <Label Text="We never store prompts by default."
+                           FontSize="12" />
+                       <Label Text="Diagnostics export contains config and event summaries only unless you explicitly opt into more detail."
+                           FontSize="12" />
+                       <HorizontalStackLayout Spacing="8">
+                        <Label Text="Include verbose diagnostics"
+                            VerticalOptions="Center" />
+                        <Switch x:Name="IncludeVerboseSwitch"
+                             IsToggled="False" />
+                       </HorizontalStackLayout>
+                       <Button Text="Show me exactly what's in export"
+                            Clicked="OnPreviewDiagnosticsClicked" />
+                       <Label x:Name="DiagnosticsPreviewLabel"
+                           FontSize="12" />
+                      </VerticalStackLayout>
+                  </Border>
                 <HorizontalStackLayout Spacing="8">
                 <Button Text="Export Diagnostics"
                     Clicked="OnExportDiagnosticsClicked" />
