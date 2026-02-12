@@ -11,6 +11,7 @@ public sealed class DaemonState
     private readonly string _runtimeDirectory;
     private readonly string _configPath;
     private readonly string _diagnosticsDirectory;
+    private readonly string _eventLogPath;
     private LiteConfig _config;
     private bool _running;
     private DateTimeOffset _startedAtUtc;
@@ -24,12 +25,16 @@ public sealed class DaemonState
     private bool _adaptiveClampActive;
     private PressureMode _pressureMode = PressureMode.Normal;
     private long _nextEventId = 1;
+    private DateTimeOffset _lastPressureSampleUtc = DateTimeOffset.MinValue;
+    private DateTimeOffset _lastLeaseSignalUtc = DateTimeOffset.MinValue;
+    private bool _lastClampState;
 
     public DaemonState()
     {
         _runtimeDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LeaseGateLite");
         _configPath = Path.Combine(_runtimeDirectory, "leasegatelite.config.json");
         _diagnosticsDirectory = Path.Combine(_runtimeDirectory, "diagnostics");
+        _eventLogPath = Path.Combine(_runtimeDirectory, "leasegatelite-events.jsonl");
         Directory.CreateDirectory(_runtimeDirectory);
         Directory.CreateDirectory(_diagnosticsDirectory);
 
@@ -198,6 +203,40 @@ public sealed class DaemonState
         }
     }
 
+    public EventStreamResponse GetEventsSince(long sinceId, int timeoutMs)
+    {
+        lock (_lock)
+        {
+            var timeout = Math.Clamp(timeoutMs, 100, 10_000);
+            var deadline = DateTimeOffset.UtcNow.AddMilliseconds(timeout);
+
+            while (true)
+            {
+                var events = _events.Where(e => e.Id > sinceId).Take(300).ToList();
+                if (events.Count > 0)
+                {
+                    return new EventStreamResponse
+                    {
+                        LastEventId = events[^1].Id,
+                        Events = events
+                    };
+                }
+
+                var remaining = deadline - DateTimeOffset.UtcNow;
+                if (remaining <= TimeSpan.Zero)
+                {
+                    return new EventStreamResponse
+                    {
+                        LastEventId = sinceId,
+                        Events = new List<EventEntry>()
+                    };
+                }
+
+                Monitor.Wait(_lock, remaining);
+            }
+        }
+    }
+
     public DiagnosticsExportResponse ExportDiagnostics()
     {
         lock (_lock)
@@ -277,6 +316,70 @@ public sealed class DaemonState
         var smoothingFactor = Math.Clamp(_config.SmoothingPercent, 5, 95) / 100.0;
         _effectiveConcurrency = (int)Math.Round((_effectiveConcurrency * smoothingFactor) + (target * (1.0 - smoothingFactor)));
         _effectiveConcurrency = Math.Clamp(_effectiveConcurrency, _running ? 1 : 0, _config.MaxConcurrency);
+
+        EmitPressureSample(pressure);
+        EmitLeaseSignals();
+        EmitClampTransitions();
+    }
+
+    private void EmitPressureSample(int pressure)
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (now - _lastPressureSampleUtc < TimeSpan.FromSeconds(2))
+        {
+            return;
+        }
+
+        _lastPressureSampleUtc = now;
+        AddEvent(
+            EventCategory.Pressure,
+            "info",
+            "pressure sample",
+            $"cpu={_cpuPercent}; availableRam={_availableRamPercent}; pressure={pressure}; effectiveConcurrency={_effectiveConcurrency}");
+    }
+
+    private void EmitLeaseSignals()
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (now - _lastLeaseSignalUtc < TimeSpan.FromSeconds(2))
+        {
+            return;
+        }
+
+        _lastLeaseSignalUtc = now;
+
+        if (_activeCalls < _effectiveConcurrency)
+        {
+            AddEvent(EventCategory.Lease, "info", "lease granted", $"active={_activeCalls}; effective={_effectiveConcurrency}");
+            return;
+        }
+
+        if (_interactiveQueueDepth + _backgroundQueueDepth > 15)
+        {
+            AddEvent(EventCategory.Lease, "warn", "lease denied", "queue pressure high");
+        }
+        else
+        {
+            AddEvent(EventCategory.Lease, "info", "lease queued", $"interactive={_interactiveQueueDepth}; background={_backgroundQueueDepth}");
+        }
+    }
+
+    private void EmitClampTransitions()
+    {
+        if (_adaptiveClampActive == _lastClampState)
+        {
+            return;
+        }
+
+        _lastClampState = _adaptiveClampActive;
+        if (_adaptiveClampActive)
+        {
+            AddEvent(EventCategory.Pressure, "warn", "adaptive clamp engaged", _lastThrottleReason.ToString());
+        }
+        else
+        {
+            AddEvent(EventCategory.Pressure, "info", "adaptive clamp released", "pressure normalized");
+        }
     }
 
     private HeatState DeriveHeatState()
@@ -412,7 +515,7 @@ public sealed class DaemonState
 
     private void AddEvent(EventCategory category, string level, string message, string detail)
     {
-        _events.Add(new EventEntry
+        var entry = new EventEntry
         {
             Id = _nextEventId++,
             TimestampUtc = DateTimeOffset.UtcNow,
@@ -420,11 +523,16 @@ public sealed class DaemonState
             Level = level,
             Message = message,
             Detail = detail
-        });
+        };
+
+        _events.Add(entry);
 
         if (_events.Count > 2000)
         {
             _events.RemoveRange(0, _events.Count - 2000);
         }
+
+        File.AppendAllText(_eventLogPath, JsonSerializer.Serialize(entry) + Environment.NewLine);
+        Monitor.PulseAll(_lock);
     }
 }

@@ -13,6 +13,9 @@ public partial class MainPage : ContentPage
 	private LiteConfig _draftConfig = new();
 	private bool _ignoreConfigEvents;
 	private bool _hasPendingChanges;
+	private bool _pauseEvents;
+	private long _lastEventId;
+	private readonly List<EventEntry> _eventBuffer = new();
 
 	public MainPage(DaemonApiClient daemonApiClient)
 	{
@@ -45,6 +48,8 @@ public partial class MainPage : ContentPage
 			_ = RefreshStatusAndEventsAsync();
 			return true;
 		});
+
+		_ = RunEventStreamLoopAsync();
 	}
 
 	private void OnSizeChanged(object? sender, EventArgs e)
@@ -79,10 +84,16 @@ public partial class MainPage : ContentPage
 				UpdateStatusUi(status);
 			}
 
-			var eventTail = await _daemonApiClient.GetEventsAsync(200, CancellationToken.None);
-			if (eventTail is not null)
+			if (_eventBuffer.Count == 0)
 			{
-				EventsEditor.Text = string.Join(Environment.NewLine, eventTail.Events.Select(e => $"{e.TimestampUtc:HH:mm:ss} [{e.Level}] {e.Message}"));
+				var eventTail = await _daemonApiClient.GetEventsAsync(200, CancellationToken.None);
+				if (eventTail is not null)
+				{
+					_eventBuffer.Clear();
+					_eventBuffer.AddRange(eventTail.Events);
+					_lastEventId = _eventBuffer.LastOrDefault()?.Id ?? 0;
+					RenderEventBuffer();
+				}
 			}
 		}
 		catch
@@ -90,6 +101,66 @@ public partial class MainPage : ContentPage
 			ConnectionStateLabel.Text = "Disconnected";
 			StatusDot.Color = Color.FromArgb("#B0B0B0");
 		}
+	}
+
+	private async Task RunEventStreamLoopAsync()
+	{
+		while (true)
+		{
+			try
+			{
+				if (_pauseEvents)
+				{
+					await Task.Delay(500);
+					continue;
+				}
+
+				var stream = await _daemonApiClient.GetEventsStreamAsync(_lastEventId, 2500, CancellationToken.None);
+				if (stream is not null && stream.Events.Count > 0)
+				{
+					MainThread.BeginInvokeOnMainThread(() =>
+					{
+						foreach (var entry in stream.Events)
+						{
+							_eventBuffer.Add(entry);
+						}
+
+						if (_eventBuffer.Count > 1200)
+						{
+							_eventBuffer.RemoveRange(0, _eventBuffer.Count - 1200);
+						}
+
+						_lastEventId = Math.Max(_lastEventId, stream.LastEventId);
+						RenderEventBuffer();
+					});
+				}
+			}
+			catch
+			{
+				await Task.Delay(1000);
+			}
+		}
+	}
+
+	private void RenderEventBuffer()
+	{
+		var includeLease = FilterLeaseSwitch.IsToggled;
+		var includePressure = FilterPressureSwitch.IsToggled;
+		var includeConfig = FilterConfigSwitch.IsToggled;
+
+		var visible = _eventBuffer.Where(e =>
+		{
+			return e.Category switch
+			{
+				EventCategory.Lease => includeLease,
+				EventCategory.Pressure => includePressure,
+				EventCategory.Config => includeConfig,
+				_ => true
+			};
+		}).TakeLast(200).ToList();
+
+		EventsEditor.Text = string.Join(Environment.NewLine,
+			visible.Select(e => $"{e.TimestampUtc:HH:mm:ss} [{e.Category}] [{e.Level}] {e.Message} {e.Detail}"));
 	}
 
 	private async Task RefreshConfigAsync()
@@ -335,6 +406,40 @@ public partial class MainPage : ContentPage
 		var summary = $"Heat={_latestStatus.HeatState}; Active={_latestStatus.ActiveCalls}; Queue={_latestStatus.InteractiveQueueDepth}/{_latestStatus.BackgroundQueueDepth}; EffectiveConcurrency={_latestStatus.EffectiveConcurrency}; CPU={_latestStatus.CpuPercent}%; RAM={_latestStatus.AvailableRamPercent}%; Reason={_latestStatus.LastThrottleReason}";
 		await Clipboard.Default.SetTextAsync(summary);
 		DiagnosticsPathLabel.Text = "Status summary copied to clipboard.";
+	}
+
+	private void OnPauseEventsClicked(object? sender, EventArgs e)
+	{
+		_pauseEvents = !_pauseEvents;
+		PauseEventsButton.Text = _pauseEvents ? "Resume" : "Pause";
+		DiagnosticsPathLabel.Text = _pauseEvents ? "Live event tail paused." : "Live event tail resumed.";
+	}
+
+	private async void OnCopyLast50Clicked(object? sender, EventArgs e)
+	{
+		var includeLease = FilterLeaseSwitch.IsToggled;
+		var includePressure = FilterPressureSwitch.IsToggled;
+		var includeConfig = FilterConfigSwitch.IsToggled;
+
+		var text = string.Join(Environment.NewLine,
+			_eventBuffer.Where(e =>
+			{
+				return e.Category switch
+				{
+					EventCategory.Lease => includeLease,
+					EventCategory.Pressure => includePressure,
+					EventCategory.Config => includeConfig,
+					_ => true
+				};
+			}).TakeLast(50).Select(e => $"{e.TimestampUtc:HH:mm:ss} [{e.Category}] [{e.Level}] {e.Message} {e.Detail}"));
+
+		await Clipboard.Default.SetTextAsync(text);
+		DiagnosticsPathLabel.Text = "Copied last 50 events.";
+	}
+
+	private void OnEventFilterToggled(object? sender, ToggledEventArgs e)
+	{
+		RenderEventBuffer();
 	}
 
 	private async void OnChecklistJumpClicked(object? sender, EventArgs e)

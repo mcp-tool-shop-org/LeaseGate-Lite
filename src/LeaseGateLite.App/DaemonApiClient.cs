@@ -58,4 +58,9 @@ public sealed class DaemonApiClient
     {
         return await _httpClient.GetFromJsonAsync<EventTailResponse>($"/events/tail?n={n}", cancellationToken);
     }
+
+    public async Task<EventStreamResponse?> GetEventsStreamAsync(long sinceId, int timeoutMs, CancellationToken cancellationToken)
+    {
+        return await _httpClient.GetFromJsonAsync<EventStreamResponse>($"/events/stream?sinceId={sinceId}&timeoutMs={timeoutMs}", cancellationToken);
+    }
 }

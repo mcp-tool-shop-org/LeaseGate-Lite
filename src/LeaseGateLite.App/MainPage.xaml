@@ -427,7 +427,32 @@
                     Clicked="OnExportDiagnosticsClicked" />
                 <Button Text="Copy Status Summary"
                     Clicked="OnCopySummaryClicked" />
+                    <Button x:Name="PauseEventsButton"
+                        Text="Pause"
+                        Clicked="OnPauseEventsClicked" />
+                    <Button Text="Copy last 50"
+                        Clicked="OnCopyLast50Clicked" />
                 </HorizontalStackLayout>
+                    <HorizontalStackLayout Spacing="12">
+                    <HorizontalStackLayout Spacing="4">
+                        <Switch x:Name="FilterLeaseSwitch"
+                            IsToggled="True"
+                            Toggled="OnEventFilterToggled" />
+                        <Label Text="leases" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout Spacing="4">
+                        <Switch x:Name="FilterPressureSwitch"
+                            IsToggled="True"
+                            Toggled="OnEventFilterToggled" />
+                        <Label Text="pressure" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout Spacing="4">
+                        <Switch x:Name="FilterConfigSwitch"
+                            IsToggled="True"
+                            Toggled="OnEventFilterToggled" />
+                        <Label Text="config" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    </HorizontalStackLayout>
                 <Label x:Name="DiagnosticsPathLabel" />
                 <Label Text="Events (tail)" FontAttributes="Bold" />
                 <Editor x:Name="EventsEditor"

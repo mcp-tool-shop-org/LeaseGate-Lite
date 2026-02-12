@@ -38,4 +38,7 @@ app.MapPost("/diagnostics/export", (DaemonState daemon) => Results.Ok(daemon.Exp
 
 app.MapGet("/events/tail", (int? n, DaemonState daemon) => Results.Ok(daemon.GetEvents(n ?? 200)));
 
+app.MapGet("/events/stream", (long? sinceId, int? timeoutMs, DaemonState daemon) =>
+    Results.Ok(daemon.GetEventsSince(sinceId ?? 0, timeoutMs ?? 2500)));
+
 app.Run();
