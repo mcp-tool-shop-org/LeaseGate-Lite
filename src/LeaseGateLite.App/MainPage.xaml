@@ -1,0 +1,442 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+         xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+         x:Class="LeaseGateLite.App.MainPage"
+         Title="Control">
+
+    <ContentPage.Resources>
+    <x:Array x:Key="Modes" Type="{x:Type sys:String}">
+        <sys:String>Embedded</sys:String>
+        <sys:String>Daemon</sys:String>
+    </x:Array>
+    <x:Array x:Key="CooldownModes" Type="{x:Type sys:String}">
+        <sys:String>Off</sys:String>
+        <sys:String>Mild</sys:String>
+        <sys:String>Aggressive</sys:String>
+    </x:Array>
+    <x:Array x:Key="OverflowModes" Type="{x:Type sys:String}">
+        <sys:String>TrimOldest</sys:String>
+        <sys:String>Deny</sys:String>
+        <sys:String>QueueOnly</sys:String>
+    </x:Array>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*"
+      Padding="18"
+      RowSpacing="12">
+
+    <Border StrokeShape="RoundRectangle 14"
+        Padding="12"
+        BackgroundColor="{AppThemeBinding Light=#F6F8FA, Dark=#1E1E1E}">
+        <Grid ColumnDefinitions="Auto,*,Auto"
+          ColumnSpacing="14"
+          VerticalOptions="Center">
+        <HorizontalStackLayout Spacing="8"
+                       VerticalOptions="Center">
+            <BoxView x:Name="StatusDot"
+                 WidthRequest="12"
+                 HeightRequest="12"
+                 CornerRadius="6"
+                 Color="#B0B0B0" />
+            <Label Text="LeaseGate Lite"
+               FontAttributes="Bold"
+               FontSize="18" />
+            <Label x:Name="ConnectionStateLabel"
+               Text="Disconnected"
+               FontSize="12" />
+        </HorizontalStackLayout>
+
+        <HorizontalStackLayout Grid.Column="1"
+                       Spacing="8"
+                       VerticalOptions="Center">
+            <Label Text="Mode"
+               VerticalOptions="Center" />
+            <Picker x:Name="ModePicker"
+                WidthRequest="120"
+                ItemsSource="{StaticResource Modes}" />
+            <Label x:Name="EndpointLabel"
+               FontFamily="OpenSansSemibold"
+               VerticalOptions="Center"
+               LineBreakMode="TailTruncation" />
+            <Border x:Name="PendingPill"
+                IsVisible="False"
+                Padding="8,2"
+                StrokeShape="RoundRectangle 10"
+                BackgroundColor="{AppThemeBinding Light=#FFF3CD, Dark=#5C4B00}">
+            <Label Text="Pending changes"
+                   FontSize="12"
+                   FontAttributes="Bold" />
+            </Border>
+        </HorizontalStackLayout>
+
+        <HorizontalStackLayout Grid.Column="2"
+                       Spacing="8"
+                       VerticalOptions="Center">
+            <Button Text="Start"
+                Clicked="OnStartClicked" />
+            <Button Text="Stop"
+                Clicked="OnStopClicked" />
+            <Button Text="Apply"
+                Clicked="OnApplyClicked" />
+            <Button Text="Export Diag"
+                Clicked="OnExportDiagnosticsClicked" />
+        </HorizontalStackLayout>
+        </Grid>
+    </Border>
+
+    <Grid Grid.Row="1"
+          x:Name="BodyGrid"
+          ColumnDefinitions="320,*"
+          ColumnSpacing="12">
+
+        <Border StrokeShape="RoundRectangle 14"
+            Padding="12"
+            BackgroundColor="{AppThemeBinding Light=#F8F9FB, Dark=#1D1D1D}">
+        <ScrollView>
+            <VerticalStackLayout Spacing="10">
+            <Label Text="Function List (Audit)"
+                   FontAttributes="Bold"
+                   FontSize="16" />
+
+            <Label Text="A) Service control"
+                   FontAttributes="Bold"
+                   FontSize="13" />
+            <Button Text="Connect / Reconnect"
+                CommandParameter="Service"
+                Clicked="OnChecklistJumpClicked" />
+            <Button Text="Start daemon"
+                CommandParameter="Service"
+                Clicked="OnChecklistJumpClicked" />
+            <Button Text="Stop daemon"
+                CommandParameter="Service"
+                Clicked="OnChecklistJumpClicked" />
+            <Button Text="Restart daemon"
+                CommandParameter="Service"
+                Clicked="OnChecklistJumpClicked" />
+            <Button Text="Show version + uptime"
+                CommandParameter="Service"
+                Clicked="OnChecklistJumpClicked" />
+            <Button Text="Open config file location"
+                CommandParameter="Service"
+                Clicked="OnChecklistJumpClicked" />
+            <Button Text="Reset to defaults"
+                CommandParameter="Service"
+                Clicked="OnChecklistJumpClicked" />
+
+            <Label Text="B) Live status"
+                   FontAttributes="Bold"
+                   FontSize="13" />
+            <Button Text="Heat + active calls + queue + pressure"
+                CommandParameter="LiveStatus"
+                Clicked="OnChecklistJumpClicked" />
+
+            <Label Text="C) Core throttling controls"
+                   FontAttributes="Bold"
+                   FontSize="13" />
+            <Button Text="Concurrency + reserve + cap + cooldown"
+                CommandParameter="Concurrency"
+                Clicked="OnChecklistJumpClicked" />
+
+            <Label Text="D) Adaptive throttle tuning"
+                   FontAttributes="Bold"
+                   FontSize="13" />
+            <Button Text="Soft/hard/recovery/smoothing"
+                CommandParameter="Adaptive"
+                Clicked="OnChecklistJumpClicked" />
+
+            <Label Text="E) Request shaping"
+                   FontAttributes="Bold"
+                   FontSize="13" />
+            <Button Text="Token clamps + overflow + retries"
+                CommandParameter="Shaping"
+                Clicked="OnChecklistJumpClicked" />
+
+            <Label Text="F) Rate limiting"
+                   FontAttributes="Bold"
+                   FontSize="13" />
+            <Button Text="Requests/min + tokens/min + burst"
+                CommandParameter="RateLimits"
+                Clicked="OnChecklistJumpClicked" />
+
+            <Label Text="G) Presets"
+                   FontAttributes="Bold"
+                   FontSize="13" />
+            <Button Text="Quiet/Balanced/Performance + custom"
+                CommandParameter="Presets"
+                Clicked="OnChecklistJumpClicked" />
+
+            <Label Text="H) Diagnostics + audit-lite"
+                   FontAttributes="Bold"
+                   FontSize="13" />
+            <Button Text="Export + event tail + summary copy"
+                CommandParameter="Diagnostics"
+                Clicked="OnChecklistJumpClicked" />
+            </VerticalStackLayout>
+        </ScrollView>
+        </Border>
+
+        <ScrollView Grid.Column="1"
+            x:Name="ControlScroll">
+        <VerticalStackLayout Spacing="12">
+
+            <Border x:Name="CardService"
+                StrokeShape="RoundRectangle 14"
+                Padding="12"
+                BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1F1F1F}">
+            <VerticalStackLayout Spacing="8">
+                <Label Text="Service"
+                   FontSize="18"
+                   FontAttributes="Bold" />
+                <Label Text="Control daemon lifecycle and connect state." />
+                <HorizontalStackLayout Spacing="8">
+                <Button Text="Reconnect"
+                    Clicked="OnReconnectClicked" />
+                <Button Text="Start"
+                    Clicked="OnStartClicked" />
+                <Button Text="Stop"
+                    Clicked="OnStopClicked" />
+                <Button Text="Restart"
+                    Clicked="OnRestartClicked" />
+                </HorizontalStackLayout>
+                <Label x:Name="VersionUptimeLabel"
+                   FontFamily="OpenSansSemibold" />
+                <HorizontalStackLayout Spacing="8">
+                <Button Text="Open Config File"
+                    Clicked="OnOpenConfigClicked" />
+                <Button Text="Reset Defaults"
+                    Clicked="OnResetDefaultsClicked" />
+                </HorizontalStackLayout>
+                <Label Text="✅ Covered by: A) Service control"
+                   FontSize="12" />
+            </VerticalStackLayout>
+            </Border>
+
+            <Border x:Name="CardLiveStatus"
+                StrokeShape="RoundRectangle 14"
+                Padding="12"
+                BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1F1F1F}">
+            <VerticalStackLayout Spacing="8">
+                <Label Text="Live Status"
+                   FontSize="18"
+                   FontAttributes="Bold" />
+                <Label Text="Current pressure and effective capacity." />
+                <HorizontalStackLayout Spacing="8">
+                <Label Text="Heat:" />
+                <Label x:Name="HeatStateLabel"
+                       FontFamily="OpenSansSemibold" />
+                <Label x:Name="ClampStateLabel"
+                       FontSize="12" />
+                </HorizontalStackLayout>
+                <Label x:Name="LiveNumbersLabel"
+                   FontFamily="OpenSansSemibold" />
+                <Label x:Name="PressureLabel"
+                   FontFamily="OpenSansSemibold" />
+                <Label x:Name="LastReasonLabel" />
+                <Label Text="✅ Covered by: B) Live status"
+                   FontSize="12" />
+            </VerticalStackLayout>
+            </Border>
+
+            <Border x:Name="CardConcurrency"
+                StrokeShape="RoundRectangle 14"
+                Padding="12"
+                BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1F1F1F}">
+            <VerticalStackLayout Spacing="8">
+                <Label Text="Concurrency"
+                   FontSize="18"
+                   FontAttributes="Bold" />
+                <Label Text="Base concurrency and reserved capacity behavior." />
+                <Label x:Name="MaxConcurrencyLabel" />
+                <Slider x:Name="MaxConcurrencySlider"
+                    Minimum="1"
+                    Maximum="32"
+                    ValueChanged="OnConfigChanged" />
+                <Label x:Name="InteractiveReserveLabel" />
+                <Slider x:Name="InteractiveReserveSlider"
+                    Minimum="0"
+                    Maximum="16"
+                    ValueChanged="OnConfigChanged" />
+                <Label x:Name="BackgroundCapLabel" />
+                <Slider x:Name="BackgroundCapSlider"
+                    Minimum="0"
+                    Maximum="32"
+                    ValueChanged="OnConfigChanged" />
+                <HorizontalStackLayout Spacing="8">
+                <Label Text="Cool-down" />
+                <Picker x:Name="CooldownBehaviorPicker"
+                    WidthRequest="150"
+                    ItemsSource="{StaticResource CooldownModes}"
+                    SelectedIndexChanged="OnConfigChanged" />
+                </HorizontalStackLayout>
+                <Label x:Name="EffectiveConcurrencyPreviewLabel"
+                   FontFamily="OpenSansSemibold" />
+                <Label Text="✅ Covered by: C) Core throttling controls"
+                   FontSize="12" />
+            </VerticalStackLayout>
+            </Border>
+
+            <Border x:Name="CardAdaptive"
+                StrokeShape="RoundRectangle 14"
+                Padding="12"
+                BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1F1F1F}">
+            <VerticalStackLayout Spacing="8">
+                <Label Text="Adaptive Throttle"
+                   FontSize="18"
+                   FontAttributes="Bold" />
+                <Label Text="Tune soft/hard clamp transitions and recovery smoothness." />
+                <Label x:Name="SoftThresholdLabel" />
+                <Slider x:Name="SoftThresholdSlider"
+                    Minimum="40"
+                    Maximum="95"
+                    ValueChanged="OnConfigChanged" />
+                <Label x:Name="HardThresholdLabel" />
+                <Slider x:Name="HardThresholdSlider"
+                    Minimum="50"
+                    Maximum="99"
+                    ValueChanged="OnConfigChanged" />
+                <Label x:Name="RecoveryRateLabel" />
+                <Slider x:Name="RecoveryRateSlider"
+                    Minimum="5"
+                    Maximum="100"
+                    ValueChanged="OnConfigChanged" />
+                <Label x:Name="SmoothingLabel" />
+                <Slider x:Name="SmoothingSlider"
+                    Minimum="5"
+                    Maximum="95"
+                    ValueChanged="OnConfigChanged" />
+                <Label Text="✅ Covered by: D) Adaptive throttle tuning"
+                   FontSize="12" />
+            </VerticalStackLayout>
+            </Border>
+
+            <Border x:Name="CardShaping"
+                StrokeShape="RoundRectangle 14"
+                Padding="12"
+                BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1F1F1F}">
+            <VerticalStackLayout Spacing="8">
+                <Label Text="Request Shaping"
+                   FontSize="18"
+                   FontAttributes="Bold" />
+                <Label Text="Bound prompt/output and define overflow and retry behavior." />
+                <Label x:Name="MaxOutputTokensLabel" />
+                <Slider x:Name="MaxOutputTokensSlider"
+                    Minimum="64"
+                    Maximum="4096"
+                    ValueChanged="OnConfigChanged" />
+                <Label x:Name="MaxPromptTokensLabel" />
+                <Slider x:Name="MaxPromptTokensSlider"
+                    Minimum="256"
+                    Maximum="32000"
+                    ValueChanged="OnConfigChanged" />
+                <HorizontalStackLayout Spacing="8">
+                <Label Text="Overflow" />
+                <Picker x:Name="OverflowBehaviorPicker"
+                    WidthRequest="150"
+                    ItemsSource="{StaticResource OverflowModes}"
+                    SelectedIndexChanged="OnConfigChanged" />
+                </HorizontalStackLayout>
+                <Label x:Name="MaxRetriesLabel" />
+                <Slider x:Name="MaxRetriesSlider"
+                    Minimum="0"
+                    Maximum="8"
+                    ValueChanged="OnConfigChanged" />
+                <Label x:Name="RetryBackoffLabel" />
+                <Slider x:Name="RetryBackoffSlider"
+                    Minimum="100"
+                    Maximum="5000"
+                    ValueChanged="OnConfigChanged" />
+                <Label Text="✅ Covered by: E) Request shaping"
+                   FontSize="12" />
+            </VerticalStackLayout>
+            </Border>
+
+            <Border x:Name="CardRateLimits"
+                StrokeShape="RoundRectangle 14"
+                Padding="12"
+                BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1F1F1F}">
+            <VerticalStackLayout Spacing="8">
+                <Label Text="Rate Limits"
+                   FontSize="18"
+                   FontAttributes="Bold" />
+                <Label Text="Smooth per-minute request and token throughput." />
+                <Label x:Name="RequestsPerMinuteLabel" />
+                <Slider x:Name="RequestsPerMinuteSlider"
+                    Minimum="10"
+                    Maximum="1000"
+                    ValueChanged="OnConfigChanged" />
+                <Label x:Name="TokensPerMinuteLabel" />
+                <Slider x:Name="TokensPerMinuteSlider"
+                    Minimum="1000"
+                    Maximum="500000"
+                    ValueChanged="OnConfigChanged" />
+                <Label x:Name="BurstAllowanceLabel" />
+                <Slider x:Name="BurstAllowanceSlider"
+                    Minimum="1"
+                    Maximum="100"
+                    ValueChanged="OnConfigChanged" />
+                <Label Text="✅ Covered by: F) Rate limiting"
+                   FontSize="12" />
+            </VerticalStackLayout>
+            </Border>
+
+            <Border x:Name="CardPresets"
+                StrokeShape="RoundRectangle 14"
+                Padding="12"
+                BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1F1F1F}">
+            <VerticalStackLayout Spacing="8">
+                <Label Text="Presets"
+                   FontSize="18"
+                   FontAttributes="Bold" />
+                <Label Text="Apply and persist practical home-PC operating profiles." />
+                <HorizontalStackLayout Spacing="8">
+                <Button Text="Quiet (Laptop)"
+                    Clicked="OnQuietPresetClicked" />
+                <Button Text="Balanced"
+                    Clicked="OnBalancedPresetClicked" />
+                <Button Text="Performance"
+                    Clicked="OnPerformancePresetClicked" />
+                </HorizontalStackLayout>
+                <HorizontalStackLayout Spacing="8">
+                <Button Text="Save Custom"
+                    Clicked="OnSaveCustomPresetClicked" />
+                <Button Text="Load Custom"
+                    Clicked="OnLoadCustomPresetClicked" />
+                </HorizontalStackLayout>
+                <Label x:Name="PresetStatusLabel" />
+                <Label Text="✅ Covered by: G) Presets"
+                   FontSize="12" />
+            </VerticalStackLayout>
+            </Border>
+
+            <Border x:Name="CardDiagnostics"
+                StrokeShape="RoundRectangle 14"
+                Padding="12"
+                BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1F1F1F}">
+            <VerticalStackLayout Spacing="8">
+                <Label Text="Diagnostics"
+                   FontSize="18"
+                   FontAttributes="Bold" />
+                <Label Text="Export runtime snapshot and inspect recent audit-lite events." />
+                <HorizontalStackLayout Spacing="8">
+                <Button Text="Export Diagnostics"
+                    Clicked="OnExportDiagnosticsClicked" />
+                <Button Text="Copy Status Summary"
+                    Clicked="OnCopySummaryClicked" />
+                </HorizontalStackLayout>
+                <Label x:Name="DiagnosticsPathLabel" />
+                <Label Text="Events (tail)" FontAttributes="Bold" />
+                <Editor x:Name="EventsEditor"
+                    HeightRequest="190"
+                    IsReadOnly="True"
+                    FontFamily="OpenSansSemibold" />
+                <Label Text="✅ Covered by: H) Diagnostics + audit-lite"
+                   FontSize="12" />
+            </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+    </Grid>
+
+</ContentPage>

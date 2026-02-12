@@ -7,6 +7,5 @@ obj/
 *.pdb
 *.apk
 *.aab
-*.app
 *.ipa
 *.dSYM/
