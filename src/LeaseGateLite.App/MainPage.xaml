@@ -79,6 +79,8 @@
                 Clicked="OnStopClicked" />
             <Button Text="Apply"
                 Clicked="OnApplyClicked" />
+            <Button Text="Revert"
+                Clicked="OnRevertClicked" />
             <Button Text="Export Diag"
                 Clicked="OnExportDiagnosticsClicked" />
         </HorizontalStackLayout>
@@ -207,6 +209,8 @@
                 <Button Text="Reset Defaults"
                     Clicked="OnResetDefaultsClicked" />
                 </HorizontalStackLayout>
+                    <Label x:Name="ConfigStatusLabel"
+                       FontSize="12" />
                 <Label Text="✅ Covered by: A) Service control"
                    FontSize="12" />
             </VerticalStackLayout>

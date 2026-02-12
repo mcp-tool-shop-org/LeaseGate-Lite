@@ -20,8 +20,10 @@ public sealed class DaemonState
     private int _effectiveConcurrency;
     private int _cpuPercent;
     private int _availableRamPercent;
-    private string _lastThrottleReason = "none";
+    private ThrottleReason _lastThrottleReason = ThrottleReason.None;
     private bool _adaptiveClampActive;
+    private PressureMode _pressureMode = PressureMode.Normal;
+    private long _nextEventId = 1;
 
     public DaemonState()
     {
@@ -31,12 +33,12 @@ public sealed class DaemonState
         Directory.CreateDirectory(_runtimeDirectory);
         Directory.CreateDirectory(_diagnosticsDirectory);
 
-        _config = LoadConfig() ?? new LiteConfig();
+        _config = LoadConfig() ?? DefaultConfig();
         _running = true;
         _startedAtUtc = DateTimeOffset.UtcNow;
         _effectiveConcurrency = _config.MaxConcurrency;
 
-        AddEvent("info", "daemon started");
+        AddEvent(EventCategory.Service, "info", "daemon started", "startup");
     }
 
     public StatusSnapshot GetStatus()
@@ -49,7 +51,7 @@ public sealed class DaemonState
             {
                 Connected = true,
                 DaemonRunning = _running,
-                DaemonVersion = "0.1.0-lite",
+                DaemonVersion = "0.2.0-lite",
                 Uptime = _running ? DateTimeOffset.UtcNow - _startedAtUtc : TimeSpan.Zero,
                 Endpoint = "http://localhost:5177",
                 ConfigFilePath = _configPath,
@@ -61,7 +63,8 @@ public sealed class DaemonState
                 CpuPercent = _cpuPercent,
                 AvailableRamPercent = _availableRamPercent,
                 LastThrottleReason = _lastThrottleReason,
-                AdaptiveClampActive = _adaptiveClampActive
+                AdaptiveClampActive = _adaptiveClampActive,
+                PressureMode = _pressureMode
             };
         }
     }
@@ -74,26 +77,66 @@ public sealed class DaemonState
         }
     }
 
-    public ServiceCommandResponse ApplyConfig(LiteConfig incoming)
+    public LiteConfig GetDefaults()
+    {
+        return DefaultConfig();
+    }
+
+    public ConfigApplyResponse ApplyConfig(LiteConfig incoming)
     {
         lock (_lock)
         {
+            var errors = ValidateConfig(incoming);
+            if (errors.Count > 0)
+            {
+                return new ConfigApplyResponse
+                {
+                    Success = false,
+                    Message = "config validation failed",
+                    AppliedConfig = Clone(_config),
+                    Errors = errors
+                };
+            }
+
             _config = Clone(incoming);
             PersistConfig();
             _effectiveConcurrency = Math.Clamp(_effectiveConcurrency, 1, Math.Max(1, _config.MaxConcurrency));
-            AddEvent("info", "configuration applied");
-            return new ServiceCommandResponse { Success = true, Message = "configuration applied" };
+            AddEvent(EventCategory.Config, "info", "configuration applied", "local user");
+
+            return new ConfigApplyResponse
+            {
+                Success = true,
+                Message = "configuration applied",
+                AppliedConfig = Clone(_config)
+            };
         }
     }
 
-    public ServiceCommandResponse ResetConfig()
+    public ConfigApplyResponse ResetConfig(bool apply)
     {
         lock (_lock)
         {
-            _config = new LiteConfig();
-            PersistConfig();
-            AddEvent("info", "configuration reset to defaults");
-            return new ServiceCommandResponse { Success = true, Message = "defaults restored" };
+            var defaults = DefaultConfig();
+            if (apply)
+            {
+                _config = defaults;
+                PersistConfig();
+                AddEvent(EventCategory.Config, "info", "configuration reset to defaults", "local user");
+                return new ConfigApplyResponse
+                {
+                    Success = true,
+                    Message = "defaults applied",
+                    AppliedConfig = Clone(_config)
+                };
+            }
+
+            AddEvent(EventCategory.Config, "info", "defaults requested", "local user");
+            return new ConfigApplyResponse
+            {
+                Success = true,
+                Message = "defaults returned",
+                AppliedConfig = defaults
+            };
         }
     }
 
@@ -108,7 +151,7 @@ public sealed class DaemonState
 
             _running = true;
             _startedAtUtc = DateTimeOffset.UtcNow;
-            AddEvent("info", "daemon started");
+            AddEvent(EventCategory.Service, "info", "daemon started", "service command");
             return new ServiceCommandResponse { Success = true, Message = "daemon started" };
         }
     }
@@ -127,8 +170,8 @@ public sealed class DaemonState
             _interactiveQueueDepth = 0;
             _backgroundQueueDepth = 0;
             _effectiveConcurrency = 0;
-            _lastThrottleReason = "daemon stopped";
-            AddEvent("warn", "daemon stopped");
+            _lastThrottleReason = ThrottleReason.ManualClamp;
+            AddEvent(EventCategory.Service, "warn", "daemon stopped", "service command");
             return new ServiceCommandResponse { Success = true, Message = "daemon stopped" };
         }
     }
@@ -139,8 +182,8 @@ public sealed class DaemonState
         {
             _running = true;
             _startedAtUtc = DateTimeOffset.UtcNow;
-            _lastThrottleReason = "none";
-            AddEvent("info", "daemon restarted");
+            _lastThrottleReason = ThrottleReason.None;
+            AddEvent(EventCategory.Service, "info", "daemon restarted", "service command");
             return new ServiceCommandResponse { Success = true, Message = "daemon restarted" };
         }
     }
@@ -173,7 +216,7 @@ public sealed class DaemonState
             File.WriteAllText(outputPath, json);
 
             var bytes = new FileInfo(outputPath).Length;
-            AddEvent("info", $"diagnostics exported: {outputPath}");
+            AddEvent(EventCategory.Diagnostics, "info", "diagnostics exported", outputPath);
 
             return new DiagnosticsExportResponse
             {
@@ -192,8 +235,9 @@ public sealed class DaemonState
             return;
         }
 
-        _cpuPercent = Math.Clamp(_cpuPercent + _random.Next(-8, 9), 18, 98);
-        _availableRamPercent = Math.Clamp(_availableRamPercent + _random.Next(-7, 8), 8, 95);
+        var delta = _pressureMode == PressureMode.Spiky ? 18 : 8;
+        _cpuPercent = Math.Clamp(_cpuPercent + _random.Next(-delta, delta + 1), 18, 98);
+        _availableRamPercent = Math.Clamp(_availableRamPercent + _random.Next(-delta, delta + 1), 8, 95);
 
         if (_cpuPercent == 0)
         {
@@ -216,18 +260,18 @@ public sealed class DaemonState
         {
             target = Math.Max(1, _config.MaxConcurrency / 2);
             _adaptiveClampActive = true;
-            _lastThrottleReason = "clamped due to high CPU pressure";
+            _lastThrottleReason = _cpuPercent >= (100 - _availableRamPercent) ? ThrottleReason.CpuPressure : ThrottleReason.MemoryPressure;
         }
         else if (pressure >= _config.SoftThresholdPercent)
         {
             target = Math.Max(1, _config.MaxConcurrency - Math.Max(1, _config.MaxConcurrency / 3));
             _adaptiveClampActive = true;
-            _lastThrottleReason = "soft throttle due to pressure";
+            _lastThrottleReason = _cpuPercent >= (100 - _availableRamPercent) ? ThrottleReason.CpuPressure : ThrottleReason.MemoryPressure;
         }
         else
         {
             _adaptiveClampActive = false;
-            _lastThrottleReason = "none";
+            _lastThrottleReason = ThrottleReason.None;
         }
 
         var smoothingFactor = Math.Clamp(_config.SmoothingPercent, 5, 95) / 100.0;
@@ -249,6 +293,68 @@ public sealed class DaemonState
         }
 
         return HeatState.Calm;
+    }
+
+    private List<ValidationError> ValidateConfig(LiteConfig incoming)
+    {
+        var errors = new List<ValidationError>();
+
+        if (incoming.ConfigVersion != 1)
+        {
+            errors.Add(new ValidationError { Field = nameof(LiteConfig.ConfigVersion), Message = "unsupported configVersion; expected 1" });
+        }
+
+        ValidateRange(errors, nameof(LiteConfig.MaxConcurrency), incoming.MaxConcurrency, 1, 32);
+        ValidateRange(errors, nameof(LiteConfig.InteractiveReserve), incoming.InteractiveReserve, 0, 16);
+        ValidateRange(errors, nameof(LiteConfig.BackgroundCap), incoming.BackgroundCap, 0, 32);
+        ValidateRange(errors, nameof(LiteConfig.SoftThresholdPercent), incoming.SoftThresholdPercent, 40, 95);
+        ValidateRange(errors, nameof(LiteConfig.HardThresholdPercent), incoming.HardThresholdPercent, 50, 99);
+        ValidateRange(errors, nameof(LiteConfig.RecoveryRatePercent), incoming.RecoveryRatePercent, 5, 100);
+        ValidateRange(errors, nameof(LiteConfig.SmoothingPercent), incoming.SmoothingPercent, 5, 95);
+        ValidateRange(errors, nameof(LiteConfig.MaxOutputTokensClamp), incoming.MaxOutputTokensClamp, 64, 4096);
+        ValidateRange(errors, nameof(LiteConfig.MaxPromptTokensClamp), incoming.MaxPromptTokensClamp, 256, 32000);
+        ValidateRange(errors, nameof(LiteConfig.MaxRetries), incoming.MaxRetries, 0, 8);
+        ValidateRange(errors, nameof(LiteConfig.RetryBackoffMs), incoming.RetryBackoffMs, 100, 5000);
+        ValidateRange(errors, nameof(LiteConfig.RequestsPerMinute), incoming.RequestsPerMinute, 10, 1000);
+        ValidateRange(errors, nameof(LiteConfig.TokensPerMinute), incoming.TokensPerMinute, 1000, 500000);
+        ValidateRange(errors, nameof(LiteConfig.BurstAllowance), incoming.BurstAllowance, 1, 100);
+
+        if (incoming.HardThresholdPercent <= incoming.SoftThresholdPercent)
+        {
+            errors.Add(new ValidationError
+            {
+                Field = nameof(LiteConfig.HardThresholdPercent),
+                Message = "hard threshold must be greater than soft threshold"
+            });
+        }
+
+        if (incoming.InteractiveReserve > incoming.MaxConcurrency)
+        {
+            errors.Add(new ValidationError
+            {
+                Field = nameof(LiteConfig.InteractiveReserve),
+                Message = "interactive reserve cannot exceed max concurrency"
+            });
+        }
+
+        if (incoming.BackgroundCap > incoming.MaxConcurrency)
+        {
+            errors.Add(new ValidationError
+            {
+                Field = nameof(LiteConfig.BackgroundCap),
+                Message = "background cap cannot exceed max concurrency"
+            });
+        }
+
+        return errors;
+    }
+
+    private static void ValidateRange(List<ValidationError> errors, string field, int value, int min, int max)
+    {
+        if (value < min || value > max)
+        {
+            errors.Add(new ValidationError { Field = field, Message = $"must be between {min} and {max}" });
+        }
     }
 
     private void PersistConfig()
@@ -275,10 +381,16 @@ public sealed class DaemonState
         }
     }
 
+    private static LiteConfig DefaultConfig()
+    {
+        return new LiteConfig();
+    }
+
     private static LiteConfig Clone(LiteConfig config)
     {
         return new LiteConfig
         {
+            ConfigVersion = config.ConfigVersion,
             MaxConcurrency = config.MaxConcurrency,
             InteractiveReserve = config.InteractiveReserve,
             BackgroundCap = config.BackgroundCap,
@@ -298,13 +410,16 @@ public sealed class DaemonState
         };
     }
 
-    private void AddEvent(string level, string message)
+    private void AddEvent(EventCategory category, string level, string message, string detail)
     {
         _events.Add(new EventEntry
         {
+            Id = _nextEventId++,
             TimestampUtc = DateTimeOffset.UtcNow,
+            Category = category,
             Level = level,
-            Message = message
+            Message = message,
+            Detail = detail
         });
 
         if (_events.Count > 2000)

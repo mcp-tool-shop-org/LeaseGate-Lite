@@ -18,9 +18,15 @@ app.MapGet("/status", (DaemonState daemon) => Results.Ok(daemon.GetStatus()));
 
 app.MapGet("/config", (DaemonState daemon) => Results.Ok(daemon.GetConfig()));
 
-app.MapPost("/config", (LiteConfig config, DaemonState daemon) => Results.Ok(daemon.ApplyConfig(config)));
+app.MapGet("/config/defaults", (DaemonState daemon) => Results.Ok(daemon.GetDefaults()));
 
-app.MapPost("/config/reset", (DaemonState daemon) => Results.Ok(daemon.ResetConfig()));
+app.MapPost("/config", (LiteConfig config, DaemonState daemon) =>
+{
+    var result = daemon.ApplyConfig(config);
+    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+});
+
+app.MapPost("/config/reset", (bool? apply, DaemonState daemon) => Results.Ok(daemon.ResetConfig(apply ?? false)));
 
 app.MapPost("/service/start", (DaemonState daemon) => Results.Ok(daemon.Start()));
 

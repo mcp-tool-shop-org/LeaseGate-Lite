@@ -22,18 +22,22 @@ public sealed class DaemonApiClient
         return await _httpClient.GetFromJsonAsync<LiteConfig>("/config", cancellationToken);
     }
 
-    public async Task<ServiceCommandResponse?> ApplyConfigAsync(LiteConfig config, CancellationToken cancellationToken)
+    public async Task<LiteConfig?> GetDefaultConfigAsync(CancellationToken cancellationToken)
     {
-        var response = await _httpClient.PostAsJsonAsync("/config", config, cancellationToken);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<ServiceCommandResponse>(cancellationToken);
+        return await _httpClient.GetFromJsonAsync<LiteConfig>("/config/defaults", cancellationToken);
     }
 
-    public async Task<ServiceCommandResponse?> ResetConfigAsync(CancellationToken cancellationToken)
+    public async Task<ConfigApplyResponse?> ApplyConfigAsync(LiteConfig config, CancellationToken cancellationToken)
     {
-        var response = await _httpClient.PostAsync("/config/reset", null, cancellationToken);
+        var response = await _httpClient.PostAsJsonAsync("/config", config, cancellationToken);
+        return await response.Content.ReadFromJsonAsync<ConfigApplyResponse>(cancellationToken);
+    }
+
+    public async Task<ConfigApplyResponse?> ResetConfigAsync(bool apply, CancellationToken cancellationToken)
+    {
+        var response = await _httpClient.PostAsync($"/config/reset?apply={apply.ToString().ToLowerInvariant()}", null, cancellationToken);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<ServiceCommandResponse>(cancellationToken);
+        return await response.Content.ReadFromJsonAsync<ConfigApplyResponse>(cancellationToken);
     }
 
     public async Task<ServiceCommandResponse?> ServiceCommandAsync(string command, CancellationToken cancellationToken)

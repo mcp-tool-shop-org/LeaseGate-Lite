@@ -9,6 +9,8 @@ public partial class MainPage : ContentPage
 	private readonly DaemonApiClient _daemonApiClient;
 	private readonly Dictionary<string, Border> _sectionCards;
 	private StatusSnapshot? _latestStatus;
+	private LiteConfig _currentConfig = new();
+	private LiteConfig _draftConfig = new();
 	private bool _ignoreConfigEvents;
 	private bool _hasPendingChanges;
 
@@ -100,25 +102,12 @@ public partial class MainPage : ContentPage
 				return;
 			}
 
-			_ignoreConfigEvents = true;
-			MaxConcurrencySlider.Value = config.MaxConcurrency;
-			InteractiveReserveSlider.Value = config.InteractiveReserve;
-			BackgroundCapSlider.Value = config.BackgroundCap;
-			CooldownBehaviorPicker.SelectedItem = config.CooldownBehavior.ToString();
-			SoftThresholdSlider.Value = config.SoftThresholdPercent;
-			HardThresholdSlider.Value = config.HardThresholdPercent;
-			RecoveryRateSlider.Value = config.RecoveryRatePercent;
-			SmoothingSlider.Value = config.SmoothingPercent;
-			MaxOutputTokensSlider.Value = config.MaxOutputTokensClamp;
-			MaxPromptTokensSlider.Value = config.MaxPromptTokensClamp;
-			OverflowBehaviorPicker.SelectedItem = config.OverflowBehavior.ToString();
-			MaxRetriesSlider.Value = config.MaxRetries;
-			RetryBackoffSlider.Value = config.RetryBackoffMs;
-			RequestsPerMinuteSlider.Value = config.RequestsPerMinute;
-			TokensPerMinuteSlider.Value = config.TokensPerMinute;
-			BurstAllowanceSlider.Value = config.BurstAllowance;
+			_currentConfig = CloneConfig(config);
+			_draftConfig = CloneConfig(config);
+			ApplyConfigToControls(_draftConfig);
 			UpdateControlLabels();
 			SetPending(false);
+			ConfigStatusLabel.Text = "Config synced with daemon.";
 		}
 		finally
 		{
@@ -168,6 +157,7 @@ public partial class MainPage : ContentPage
 	{
 		return new LiteConfig
 		{
+			ConfigVersion = 1,
 			MaxConcurrency = (int)Math.Round(MaxConcurrencySlider.Value),
 			InteractiveReserve = (int)Math.Round(InteractiveReserveSlider.Value),
 			BackgroundCap = (int)Math.Round(BackgroundCapSlider.Value),
@@ -191,6 +181,52 @@ public partial class MainPage : ContentPage
 	{
 		_hasPendingChanges = pending;
 		PendingPill.IsVisible = pending;
+	}
+
+	private void ApplyConfigToControls(LiteConfig config)
+	{
+		_ignoreConfigEvents = true;
+		MaxConcurrencySlider.Value = config.MaxConcurrency;
+		InteractiveReserveSlider.Value = config.InteractiveReserve;
+		BackgroundCapSlider.Value = config.BackgroundCap;
+		CooldownBehaviorPicker.SelectedItem = config.CooldownBehavior.ToString();
+		SoftThresholdSlider.Value = config.SoftThresholdPercent;
+		HardThresholdSlider.Value = config.HardThresholdPercent;
+		RecoveryRateSlider.Value = config.RecoveryRatePercent;
+		SmoothingSlider.Value = config.SmoothingPercent;
+		MaxOutputTokensSlider.Value = config.MaxOutputTokensClamp;
+		MaxPromptTokensSlider.Value = config.MaxPromptTokensClamp;
+		OverflowBehaviorPicker.SelectedItem = config.OverflowBehavior.ToString();
+		MaxRetriesSlider.Value = config.MaxRetries;
+		RetryBackoffSlider.Value = config.RetryBackoffMs;
+		RequestsPerMinuteSlider.Value = config.RequestsPerMinute;
+		TokensPerMinuteSlider.Value = config.TokensPerMinute;
+		BurstAllowanceSlider.Value = config.BurstAllowance;
+		_ignoreConfigEvents = false;
+	}
+
+	private static LiteConfig CloneConfig(LiteConfig config)
+	{
+		return new LiteConfig
+		{
+			ConfigVersion = config.ConfigVersion,
+			MaxConcurrency = config.MaxConcurrency,
+			InteractiveReserve = config.InteractiveReserve,
+			BackgroundCap = config.BackgroundCap,
+			CooldownBehavior = config.CooldownBehavior,
+			SoftThresholdPercent = config.SoftThresholdPercent,
+			HardThresholdPercent = config.HardThresholdPercent,
+			RecoveryRatePercent = config.RecoveryRatePercent,
+			SmoothingPercent = config.SmoothingPercent,
+			MaxOutputTokensClamp = config.MaxOutputTokensClamp,
+			MaxPromptTokensClamp = config.MaxPromptTokensClamp,
+			OverflowBehavior = config.OverflowBehavior,
+			MaxRetries = config.MaxRetries,
+			RetryBackoffMs = config.RetryBackoffMs,
+			RequestsPerMinute = config.RequestsPerMinute,
+			TokensPerMinute = config.TokensPerMinute,
+			BurstAllowance = config.BurstAllowance
+		};
 	}
 
 	private async Task ExecuteServiceCommandAsync(string command)
@@ -221,10 +257,36 @@ public partial class MainPage : ContentPage
 
 	private async void OnApplyClicked(object? sender, EventArgs e)
 	{
-		var config = BuildConfigFromControls();
-		await _daemonApiClient.ApplyConfigAsync(config, CancellationToken.None);
+		_draftConfig = BuildConfigFromControls();
+		var response = await _daemonApiClient.ApplyConfigAsync(_draftConfig, CancellationToken.None);
+		if (response is null)
+		{
+			ConfigStatusLabel.Text = "Apply failed: no response";
+			return;
+		}
+
+		if (!response.Success)
+		{
+			var first = response.Errors.FirstOrDefault();
+			ConfigStatusLabel.Text = first is null ? "Apply failed." : $"Apply failed: {first.Field} - {first.Message}";
+			return;
+		}
+
+		_currentConfig = CloneConfig(response.AppliedConfig);
+		_draftConfig = CloneConfig(response.AppliedConfig);
+		ApplyConfigToControls(_currentConfig);
 		SetPending(false);
+		ConfigStatusLabel.Text = "Config applied atomically.";
 		await RefreshStatusAndEventsAsync();
+	}
+
+	private void OnRevertClicked(object? sender, EventArgs e)
+	{
+		_draftConfig = CloneConfig(_currentConfig);
+		ApplyConfigToControls(_draftConfig);
+		UpdateControlLabels();
+		SetPending(false);
+		ConfigStatusLabel.Text = "Draft reverted to last confirmed config.";
 	}
 
 	private async void OnOpenConfigClicked(object? sender, EventArgs e)
@@ -242,9 +304,18 @@ public partial class MainPage : ContentPage
 
 	private async void OnResetDefaultsClicked(object? sender, EventArgs e)
 	{
-		await _daemonApiClient.ResetConfigAsync(CancellationToken.None);
-		await RefreshConfigAsync();
-		await RefreshStatusAndEventsAsync();
+		var response = await _daemonApiClient.ResetConfigAsync(false, CancellationToken.None);
+		if (response is null)
+		{
+			ConfigStatusLabel.Text = "Defaults request failed.";
+			return;
+		}
+
+		_draftConfig = CloneConfig(response.AppliedConfig);
+		ApplyConfigToControls(_draftConfig);
+		UpdateControlLabels();
+		SetPending(true);
+		ConfigStatusLabel.Text = "Defaults loaded into draft. Click Apply to commit.";
 	}
 
 	private async void OnExportDiagnosticsClicked(object? sender, EventArgs e)
@@ -292,8 +363,34 @@ public partial class MainPage : ContentPage
 			return;
 		}
 
+		_draftConfig = BuildConfigFromControls();
 		UpdateControlLabels();
-		SetPending(true);
+		SetPending(!ConfigsEqual(_draftConfig, _currentConfig));
+		if (_hasPendingChanges)
+		{
+			ConfigStatusLabel.Text = "Draft changed. Apply to commit or Revert to discard.";
+		}
+	}
+
+	private static bool ConfigsEqual(LiteConfig left, LiteConfig right)
+	{
+		return left.ConfigVersion == right.ConfigVersion
+		       && left.MaxConcurrency == right.MaxConcurrency
+		       && left.InteractiveReserve == right.InteractiveReserve
+		       && left.BackgroundCap == right.BackgroundCap
+		       && left.CooldownBehavior == right.CooldownBehavior
+		       && left.SoftThresholdPercent == right.SoftThresholdPercent
+		       && left.HardThresholdPercent == right.HardThresholdPercent
+		       && left.RecoveryRatePercent == right.RecoveryRatePercent
+		       && left.SmoothingPercent == right.SmoothingPercent
+		       && left.MaxOutputTokensClamp == right.MaxOutputTokensClamp
+		       && left.MaxPromptTokensClamp == right.MaxPromptTokensClamp
+		       && left.OverflowBehavior == right.OverflowBehavior
+		       && left.MaxRetries == right.MaxRetries
+		       && left.RetryBackoffMs == right.RetryBackoffMs
+		       && left.RequestsPerMinute == right.RequestsPerMinute
+		       && left.TokensPerMinute == right.TokensPerMinute
+		       && left.BurstAllowance == right.BurstAllowance;
 	}
 
 	private void ApplyQuietPreset()
