@@ -103,6 +103,9 @@
                        FontSize="16" />
                 <Label Text="Pick a goal, choose optional comfort toggles, and finish in under 30 seconds."
                        FontSize="12" />
+                  <Label x:Name="FirstRunSuggestionLabel"
+                      FontSize="12"
+                      FontFamily="OpenSansSemibold" />
 
                 <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
                     <Border StrokeShape="RoundRectangle 10" Padding="8" BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1F1F1F}">

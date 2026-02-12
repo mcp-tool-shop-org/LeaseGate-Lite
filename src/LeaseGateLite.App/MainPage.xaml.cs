@@ -577,7 +577,20 @@ public partial class MainPage : ContentPage
 		FirstRunBalancedRadio.IsChecked = true;
 		FirstRunResponsiveSwitch.IsToggled = true;
 		FirstRunStartOnLoginSwitch.IsToggled = StartOnLoginSwitch.IsToggled;
+		FirstRunSuggestionLabel.Text = DetectLaptopLikeDevice()
+			? "This device looks laptop-like, so Quiet may keep fan noise and heat lower."
+			: "Balanced is the default and usually works well without extra tuning.";
 		FirstRunStatusLabel.Text = "";
+	}
+
+	private static bool DetectLaptopLikeDevice()
+	{
+		if (DeviceInfo.Current.Platform == DevicePlatform.WinUI || DeviceInfo.Current.Platform == DevicePlatform.MacCatalyst)
+		{
+			return Environment.ProcessorCount <= 8;
+		}
+
+		return false;
 	}
 
 	private void OnFirstRunGoalChanged(object? sender, CheckedChangedEventArgs e)

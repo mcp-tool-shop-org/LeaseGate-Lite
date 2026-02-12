@@ -26,6 +26,25 @@ dotnet build src/LeaseGateLite.App -f net10.0-windows10.0.19041.0
 dotnet run --project src/LeaseGateLite.App -f net10.0-windows10.0.19041.0
 ```
 
+## One-click packaging and install (Windows)
+
+Create release artifact (portable zip + SHA256 checksum):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/package-v0.1.0.ps1
+```
+
+Install locally from packaged artifact:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/install-local.ps1 -EnableAutostart
+```
+
+Post-install behavior:
+- Daemon runs immediately and can be configured to start on login.
+- Control panel launches and connects automatically.
+- Balanced is the default preset; laptop-like hardware gets a Quiet recommendation in first-run setup (never forced).
+
 ## Daemon endpoints (minimal)
 
 - `GET /status` — live `StatusSnapshot`
