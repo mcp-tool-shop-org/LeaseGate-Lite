@@ -4,7 +4,22 @@ param(
 
 Write-Host "[LeaseGate-Lite Demo] High-load scenario and recovery"
 
-Invoke-RestMethod -Method Post -Uri "$BaseUrl/simulate/pressure" -ContentType "application/json" -Body (@{ mode = "Spiky" } | ConvertTo-Json)
+function Set-PressureMode {
+    param(
+        [string]$ModeName,
+        [int]$ModeValue
+    )
+
+    try {
+        Invoke-RestMethod -Method Post -Uri "$BaseUrl/simulate/pressure" -ContentType "application/json" -Body (@{ mode = $ModeName } | ConvertTo-Json)
+        return
+    }
+    catch {
+        Invoke-RestMethod -Method Post -Uri "$BaseUrl/simulate/pressure" -ContentType "application/json" -Body (@{ mode = $ModeValue } | ConvertTo-Json)
+    }
+}
+
+Set-PressureMode -ModeName "Spiky" -ModeValue 1
 Invoke-RestMethod -Method Post -Uri "$BaseUrl/simulate/flood" -ContentType "application/json" -Body (@{
     interactiveRequests = 40
     backgroundRequests = 60
@@ -16,7 +31,7 @@ Start-Sleep -Seconds 4
 $statusHot = Invoke-RestMethod -Method Get -Uri "$BaseUrl/status"
 Write-Host "During load -> Heat: $($statusHot.HeatState), Effective: $($statusHot.EffectiveConcurrency), Reason: $($statusHot.LastThrottleReason)"
 
-Invoke-RestMethod -Method Post -Uri "$BaseUrl/simulate/pressure" -ContentType "application/json" -Body (@{ mode = "Normal" } | ConvertTo-Json)
+Set-PressureMode -ModeName "Normal" -ModeValue 0
 Start-Sleep -Seconds 4
 $statusRecovered = Invoke-RestMethod -Method Get -Uri "$BaseUrl/status"
 Write-Host "After recovery -> Heat: $($statusRecovered.HeatState), Effective: $($statusRecovered.EffectiveConcurrency), Reason: $($statusRecovered.LastThrottleReason)"

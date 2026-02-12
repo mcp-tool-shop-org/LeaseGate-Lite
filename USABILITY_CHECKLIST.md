@@ -49,3 +49,21 @@ Run each script in `scripts/` and record outcome:
 - Date:
 - Build/commit:
 - Decision: [ ] RELEASE BLOCKED  [ ] RELEASE READY
+
+---
+
+## Draft Results (2026-02-12)
+- Tester: GitHub Copilot (scripted dry-run)
+- Build/commit: `e24afb4` + local fixes for daemon startup/event signaling and pressure-mode demo compatibility
+- Decision: RELEASE BLOCKED (full checklist still requires manual UX capture/sign-off)
+
+### Script outcomes
+- `scripts/demo-laptop-mode.ps1`: PASS
+	- Observed: preset apply succeeded; effective concurrency reported; script completed.
+- `scripts/demo-high-load-recovery.ps1`: PASS
+	- Observed: pressure mode set to `Spiky` and `Normal` successfully; load/recovery status returned.
+- `scripts/demo-app-profile-override.ps1`: PASS
+	- Observed: app override created and flood simulation applied; status/queue metrics returned.
+
+### Notes
+- Script-level gate is now green; complete remaining manual checklist items (screenshots, UX pass/fail review, sign-off) before tagging `v0.1.0`.

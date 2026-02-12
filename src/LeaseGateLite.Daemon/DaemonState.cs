@@ -1077,7 +1077,10 @@ public sealed class DaemonState
         }
 
         File.AppendAllText(_eventLogPath, JsonSerializer.Serialize(entry) + Environment.NewLine);
-        Monitor.PulseAll(_lock);
+        if (Monitor.IsEntered(_lock))
+        {
+            Monitor.PulseAll(_lock);
+        }
     }
 
     private StatusSnapshot BuildStatusSnapshot()

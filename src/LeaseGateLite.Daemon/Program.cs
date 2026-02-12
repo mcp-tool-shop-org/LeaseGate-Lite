@@ -1,6 +1,7 @@
 using LeaseGateLite.Contracts;
 using LeaseGateLite.Daemon;
 using Microsoft.AspNetCore.Http.Timeouts;
+using System.Text.Json.Serialization;
 
 const string MutexName = "Local\\LeaseGateLite.Daemon.Singleton";
 
@@ -50,6 +51,10 @@ if (!singleInstance.Acquired)
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 builder.Services.AddRequestTimeouts(options =>
 {
     options.DefaultPolicy = new RequestTimeoutPolicy
