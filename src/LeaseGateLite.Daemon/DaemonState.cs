@@ -7,6 +7,7 @@ namespace LeaseGateLite.Daemon;
 
 public sealed class DaemonState
 {
+    private const int MaxQueuedItems = 500;
     private readonly object _lock = new();
     private readonly Random _random = new();
     private readonly List<EventEntry> _events = new();
@@ -18,6 +19,7 @@ public sealed class DaemonState
     private readonly Dictionary<string, AppProfileOverride> _profileOverrides = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, (int Interactive, int Background)> _appDemands = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<StatusSampleEntry> _statusSamples = new();
+    private readonly List<ThrottleReasonEntry> _throttleReasonHistory = new();
     private LiteConfig _config;
     private bool _running;
     private DateTimeOffset _startedAtUtc;
@@ -56,6 +58,7 @@ public sealed class DaemonState
         _startedAtUtc = DateTimeOffset.UtcNow;
         _effectiveConcurrency = _config.MaxConcurrency;
         _smoothedPressure = 45;
+        RecordThrottleReason(ThrottleReason.None, "startup");
 
         AddEvent(EventCategory.Service, "info", "daemon started", "startup");
     }
@@ -287,6 +290,7 @@ public sealed class DaemonState
             _backgroundQueueDepth = 0;
             _effectiveConcurrency = 0;
             _lastThrottleReason = ThrottleReason.ManualClamp;
+            RecordThrottleReason(_lastThrottleReason, "daemon stopped");
             AddEvent(EventCategory.Service, "warn", "daemon stopped", "service command");
             return new ServiceCommandResponse { Success = true, Message = "daemon stopped" };
         }
@@ -299,6 +303,7 @@ public sealed class DaemonState
             _running = true;
             _startedAtUtc = DateTimeOffset.UtcNow;
             _lastThrottleReason = ThrottleReason.None;
+            RecordThrottleReason(_lastThrottleReason, "daemon restarted");
             AddEvent(EventCategory.Service, "info", "daemon restarted", "service command");
             return new ServiceCommandResponse { Success = true, Message = "daemon restarted" };
         }
@@ -516,8 +521,33 @@ public sealed class DaemonState
             var background = Math.Clamp(request.BackgroundRequests, 0, 200);
             _appDemands[appId] = (interactive, background);
 
+            if (_appDemands.Count > 100)
+            {
+                foreach (var stale in _appDemands.Keys.Take(_appDemands.Count - 100).ToList())
+                {
+                    _appDemands.Remove(stale);
+                }
+            }
+
             _interactiveDemand = _appDemands.Values.Sum(v => v.Interactive);
             _backgroundDemand = _appDemands.Values.Sum(v => v.Background);
+
+            var totalDemand = _interactiveDemand + _backgroundDemand;
+            if (totalDemand > MaxQueuedItems)
+            {
+                var scale = MaxQueuedItems / (double)totalDemand;
+                foreach (var key in _appDemands.Keys.ToList())
+                {
+                    var demand = _appDemands[key];
+                    _appDemands[key] = (
+                        (int)Math.Floor(demand.Interactive * scale),
+                        (int)Math.Floor(demand.Background * scale));
+                }
+
+                _interactiveDemand = _appDemands.Values.Sum(v => v.Interactive);
+                _backgroundDemand = _appDemands.Values.Sum(v => v.Background);
+                AddEvent(EventCategory.Lease, "warn", "queue demand bounded", $"maxQueuedItems={MaxQueuedItems}");
+            }
 
             AddEvent(EventCategory.Lease, "warn", "flood simulation triggered", $"app={appId}; interactive={interactive}; background={background}");
             return new ServiceCommandResponse
@@ -594,6 +624,7 @@ public sealed class DaemonState
             target = Math.Max(1, target - reduction);
             _adaptiveClampActive = true;
             _lastThrottleReason = _cpuPercent >= (100 - _availableRamPercent) ? ThrottleReason.CpuPressure : ThrottleReason.MemoryPressure;
+            RecordThrottleReason(_lastThrottleReason, "soft-threshold clamp");
         }
         else
         {
@@ -607,6 +638,7 @@ public sealed class DaemonState
             {
                 target = Math.Max(1, Math.Min(target, _config.InteractiveReserve + 1));
                 _lastThrottleReason = ThrottleReason.Cooldown;
+                RecordThrottleReason(_lastThrottleReason, "hard-threshold cooldown");
             }
         }
 
@@ -614,6 +646,7 @@ public sealed class DaemonState
         {
             target = Math.Max(1, Math.Min(target, _config.MaxConcurrency / 2));
             _lastThrottleReason = ThrottleReason.RateLimit;
+            RecordThrottleReason(_lastThrottleReason, "requests/min guard");
         }
 
         var recoverLerp = Math.Clamp(_config.RecoveryRatePercent, 5, 100) / 100.0;
@@ -624,6 +657,7 @@ public sealed class DaemonState
         {
             _effectiveConcurrency = Math.Min(_effectiveConcurrency, Math.Max(1, _config.MaxConcurrency / 2));
             _lastThrottleReason = ThrottleReason.ManualClamp;
+            RecordThrottleReason(_lastThrottleReason, "degraded sampler fallback");
         }
 
         var activeInteractive = 0;
@@ -642,6 +676,7 @@ public sealed class DaemonState
             {
                 availableForBackground = 0;
                 _lastThrottleReason = ThrottleReason.ManualClamp;
+                RecordThrottleReason(_lastThrottleReason, "background paused");
             }
 
             var appActiveInteractive = Math.Min(demand.Interactive, Math.Max(1, reservedInteractive));
@@ -670,6 +705,20 @@ public sealed class DaemonState
         }
 
         _activeCalls = activeInteractive + activeBackground;
+        var totalQueue = interactiveQueued + backgroundQueued;
+        if (totalQueue > MaxQueuedItems)
+        {
+            var overflow = totalQueue - MaxQueuedItems;
+            var trimBackgroundQueue = Math.Min(overflow, backgroundQueued);
+            backgroundQueued -= trimBackgroundQueue;
+            overflow -= trimBackgroundQueue;
+            if (overflow > 0)
+            {
+                interactiveQueued = Math.Max(0, interactiveQueued - overflow);
+            }
+            AddEvent(EventCategory.Lease, "warn", "queue bounded", $"maxQueuedItems={MaxQueuedItems}");
+        }
+
         _interactiveQueueDepth = interactiveQueued;
         _backgroundQueueDepth = backgroundQueued;
 
@@ -710,7 +759,8 @@ public sealed class DaemonState
     private void EmitPressureSample(int pressure)
     {
         var now = DateTimeOffset.UtcNow;
-        if (now - _lastPressureSampleUtc < TimeSpan.FromSeconds(2))
+        var cadence = _pressureMode == PressureMode.Spiky ? TimeSpan.FromMilliseconds(500) : TimeSpan.FromSeconds(2);
+        if (now - _lastPressureSampleUtc < cadence)
         {
             return;
         }
@@ -992,8 +1042,33 @@ public sealed class DaemonState
             PressureMode = _pressureMode,
             DegradedMode = _degradedMode,
             DegradedReason = _degradedReason,
-            BackgroundPaused = _backgroundPaused
+            BackgroundPaused = _backgroundPaused,
+            RecentThrottleReasons = _throttleReasonHistory.TakeLast(3).ToList()
         };
+    }
+
+    private void RecordThrottleReason(ThrottleReason reason, string detail)
+    {
+        if (_throttleReasonHistory.Count > 0)
+        {
+            var last = _throttleReasonHistory[^1];
+            if (last.Reason == reason && string.Equals(last.Detail, detail, StringComparison.Ordinal))
+            {
+                return;
+            }
+        }
+
+        _throttleReasonHistory.Add(new ThrottleReasonEntry
+        {
+            TimestampUtc = DateTimeOffset.UtcNow,
+            Reason = reason,
+            Detail = detail
+        });
+
+        if (_throttleReasonHistory.Count > 64)
+        {
+            _throttleReasonHistory.RemoveRange(0, _throttleReasonHistory.Count - 64);
+        }
     }
 
     private static string RedactSensitiveText(string input, bool includePaths = false)

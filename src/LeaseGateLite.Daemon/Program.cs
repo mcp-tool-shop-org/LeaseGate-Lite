@@ -1,5 +1,6 @@
 using LeaseGateLite.Contracts;
 using LeaseGateLite.Daemon;
+using Microsoft.AspNetCore.Http.Timeouts;
 
 const string MutexName = "Local\\LeaseGateLite.Daemon.Singleton";
 
@@ -49,6 +50,13 @@ if (!singleInstance.Acquired)
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.AddRequestTimeouts(options =>
+{
+    options.DefaultPolicy = new RequestTimeoutPolicy
+    {
+        Timeout = TimeSpan.FromSeconds(5)
+    };
+});
 builder.Services.AddSingleton<DaemonState>();
 builder.WebHost.UseUrls("http://localhost:5177");
 
@@ -62,6 +70,8 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+app.UseRequestTimeouts();
 
 app.Use(async (context, next) =>
 {

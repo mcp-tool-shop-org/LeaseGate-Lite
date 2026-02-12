@@ -256,6 +256,12 @@
                 <Label x:Name="PressureLabel"
                    FontFamily="OpenSansSemibold" />
                 <Label x:Name="LastReasonLabel" />
+                  <Button x:Name="WhyThrottledButton"
+                       Text="Why am I throttled?"
+                       Clicked="OnToggleThrottleReasonsClicked" />
+                  <Label x:Name="ThrottleReasonsLabel"
+                      IsVisible="False"
+                      FontSize="12" />
                 <Label Text="✅ Covered by: B) Live status"
                    FontSize="12" />
             </VerticalStackLayout>

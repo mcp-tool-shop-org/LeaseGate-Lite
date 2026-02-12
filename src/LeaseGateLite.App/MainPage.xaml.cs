@@ -16,6 +16,8 @@ public partial class MainPage : ContentPage
 	private bool _pauseEvents;
 	private bool _ignoreAutostartToggle;
 	private bool _ignoreProfileEvents;
+	private int _eventReconnectDelayMs = 500;
+	private bool _daemonReachable = true;
 	private long _lastEventId;
 	private readonly List<EventEntry> _eventBuffer = new();
 	private readonly List<SeenClient> _recentProfileApps = new();
@@ -150,6 +152,7 @@ public partial class MainPage : ContentPage
 			if (status is not null)
 			{
 				_latestStatus = status;
+				_daemonReachable = true;
 				UpdateStatusUi(status);
 			}
 
@@ -167,7 +170,9 @@ public partial class MainPage : ContentPage
 		}
 		catch
 		{
+			_daemonReachable = false;
 			ConnectionStateLabel.Text = "Disconnected";
+			DiagnosticsPathLabel.Text = "Daemon unreachable. Showing last known status.";
 			StatusDot.Color = Color.FromArgb("#B0B0B0");
 		}
 	}
@@ -203,10 +208,14 @@ public partial class MainPage : ContentPage
 						RenderEventBuffer();
 					});
 				}
+
+				_eventReconnectDelayMs = 500;
 			}
 			catch
 			{
-				await Task.Delay(1000);
+				_daemonReachable = false;
+				await Task.Delay(_eventReconnectDelayMs);
+				_eventReconnectDelayMs = Math.Min(8000, _eventReconnectDelayMs * 2);
 			}
 		}
 	}
@@ -257,7 +266,7 @@ public partial class MainPage : ContentPage
 
 	private void UpdateStatusUi(StatusSnapshot status)
 	{
-		ConnectionStateLabel.Text = status.Connected ? "Connected" : "Disconnected";
+		ConnectionStateLabel.Text = !_daemonReachable ? "Daemon unreachable" : status.Connected ? "Connected" : "Disconnected";
 		EndpointLabel.Text = status.Endpoint;
 		VersionUptimeLabel.Text = $"Version: {status.DaemonVersion}    Uptime: {status.Uptime:hh\\:mm\\:ss}";
 		HeatStateLabel.Text = status.HeatState.ToString();
@@ -265,7 +274,14 @@ public partial class MainPage : ContentPage
 		LiveNumbersLabel.Text = $"Active: {status.ActiveCalls}   Queue: {status.InteractiveQueueDepth}/{status.BackgroundQueueDepth}   Effective concurrency: {status.EffectiveConcurrency}";
 		PressureLabel.Text = $"CPU: {status.CpuPercent}%   Available RAM: {status.AvailableRamPercent}%";
 		LastReasonLabel.Text = $"Last throttle reason: {status.LastThrottleReason}";
+		ThrottleReasonsLabel.Text = status.RecentThrottleReasons.Count == 0
+			? "No recent throttle reasons."
+			: string.Join(Environment.NewLine, status.RecentThrottleReasons
+				.TakeLast(3)
+				.Reverse()
+				.Select(r => $"{r.TimestampUtc:HH:mm:ss} — {r.Reason} ({r.Detail})"));
 		EffectiveConcurrencyPreviewLabel.Text = $"Effective concurrency right now: {status.EffectiveConcurrency}";
+		UpdateControlLabels();
 
 		StatusDot.Color = status.HeatState switch
 		{
@@ -277,7 +293,7 @@ public partial class MainPage : ContentPage
 
 	private void UpdateControlLabels()
 	{
-		MaxConcurrencyLabel.Text = $"Max concurrency (base): {(int)MaxConcurrencySlider.Value}";
+		MaxConcurrencyLabel.Text = $"Max concurrency (base): {(int)MaxConcurrencySlider.Value}   |   Effective: {_latestStatus?.EffectiveConcurrency ?? 0}";
 		InteractiveReserveLabel.Text = $"Interactive reserve: {(int)InteractiveReserveSlider.Value}";
 		BackgroundCapLabel.Text = $"Background cap: {(int)BackgroundCapSlider.Value}";
 		SoftThresholdLabel.Text = $"Soft threshold: {(int)SoftThresholdSlider.Value}%";
@@ -407,6 +423,12 @@ public partial class MainPage : ContentPage
 	private async void OnReconnectClicked(object? sender, EventArgs e)
 	{
 		await RefreshAllAsync();
+	}
+
+	private void OnToggleThrottleReasonsClicked(object? sender, EventArgs e)
+	{
+		ThrottleReasonsLabel.IsVisible = !ThrottleReasonsLabel.IsVisible;
+		WhyThrottledButton.Text = ThrottleReasonsLabel.IsVisible ? "Hide throttle details" : "Why am I throttled?";
 	}
 
 	private void OnRecentAppChanged(object? sender, EventArgs e)

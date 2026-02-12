@@ -21,6 +21,14 @@ public sealed class StatusSnapshot
     public bool DegradedMode { get; set; }
     public string DegradedReason { get; set; } = string.Empty;
     public bool BackgroundPaused { get; set; }
+    public List<ThrottleReasonEntry> RecentThrottleReasons { get; set; } = new();
+}
+
+public sealed class ThrottleReasonEntry
+{
+    public DateTimeOffset TimestampUtc { get; set; }
+    public ThrottleReason Reason { get; set; } = ThrottleReason.None;
+    public string Detail { get; set; } = string.Empty;
 }
 
 public sealed class AutostartStatusResponse
