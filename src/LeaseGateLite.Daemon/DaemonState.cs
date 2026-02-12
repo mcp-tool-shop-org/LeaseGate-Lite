@@ -91,29 +91,7 @@ public sealed class DaemonState
     {
         lock (_lock)
         {
-            var errors = ValidateConfig(incoming);
-            if (errors.Count > 0)
-            {
-                return new ConfigApplyResponse
-                {
-                    Success = false,
-                    Message = "config validation failed",
-                    AppliedConfig = Clone(_config),
-                    Errors = errors
-                };
-            }
-
-            _config = Clone(incoming);
-            PersistConfig();
-            _effectiveConcurrency = Math.Clamp(_effectiveConcurrency, 1, Math.Max(1, _config.MaxConcurrency));
-            AddEvent(EventCategory.Config, "info", "configuration applied", "local user");
-
-            return new ConfigApplyResponse
-            {
-                Success = true,
-                Message = "configuration applied",
-                AppliedConfig = Clone(_config)
-            };
+            return ApplyConfigCore(incoming);
         }
     }
 
@@ -143,6 +121,143 @@ public sealed class DaemonState
                 AppliedConfig = defaults
             };
         }
+    }
+
+    public List<PresetDefinition> GetPresets()
+    {
+        return new List<PresetDefinition>
+        {
+            new()
+            {
+                Name = "Quiet",
+                Description = "Laptop-first profile with aggressive cooldown and tighter caps.",
+                Config = new LiteConfig
+                {
+                    ConfigVersion = 1,
+                    MaxConcurrency = 4,
+                    InteractiveReserve = 2,
+                    BackgroundCap = 2,
+                    CooldownBehavior = CooldownBehavior.Aggressive,
+                    SoftThresholdPercent = 60,
+                    HardThresholdPercent = 80,
+                    RecoveryRatePercent = 15,
+                    SmoothingPercent = 70,
+                    MaxOutputTokensClamp = 512,
+                    MaxPromptTokensClamp = 2048,
+                    OverflowBehavior = OverflowBehavior.QueueOnly,
+                    MaxRetries = 1,
+                    RetryBackoffMs = 700,
+                    RequestsPerMinute = 80,
+                    TokensPerMinute = 80_000,
+                    BurstAllowance = 8
+                }
+            },
+            new()
+            {
+                Name = "Balanced",
+                Description = "Default home profile for mixed interactive and background work.",
+                Config = new LiteConfig()
+            },
+            new()
+            {
+                Name = "Performance",
+                Description = "Desktop profile with higher throughput and lighter damping.",
+                Config = new LiteConfig
+                {
+                    ConfigVersion = 1,
+                    MaxConcurrency = 14,
+                    InteractiveReserve = 2,
+                    BackgroundCap = 12,
+                    CooldownBehavior = CooldownBehavior.Off,
+                    SoftThresholdPercent = 78,
+                    HardThresholdPercent = 95,
+                    RecoveryRatePercent = 35,
+                    SmoothingPercent = 25,
+                    MaxOutputTokensClamp = 2048,
+                    MaxPromptTokensClamp = 8192,
+                    OverflowBehavior = OverflowBehavior.TrimOldest,
+                    MaxRetries = 3,
+                    RetryBackoffMs = 400,
+                    RequestsPerMinute = 240,
+                    TokensPerMinute = 240_000,
+                    BurstAllowance = 20
+                }
+            }
+        };
+    }
+
+    public PresetPreviewResponse PreviewPreset(string name)
+    {
+        lock (_lock)
+        {
+            var preset = GetPresets().FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+            if (preset is null)
+            {
+                return new PresetPreviewResponse { Name = name };
+            }
+
+            return new PresetPreviewResponse
+            {
+                Name = preset.Name,
+                Diffs = BuildDiff(_config, preset.Config)
+            };
+        }
+    }
+
+    public ConfigApplyResponse ApplyPreset(string name)
+    {
+        lock (_lock)
+        {
+            var preset = GetPresets().FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+            if (preset is null)
+            {
+                return new ConfigApplyResponse
+                {
+                    Success = false,
+                    Message = "preset not found",
+                    AppliedConfig = Clone(_config),
+                    Errors = new List<ValidationError>
+                    {
+                        new() { Field = "name", Message = "preset name is unknown" }
+                    }
+                };
+            }
+
+            var applied = ApplyConfigCore(preset.Config);
+            if (applied.Success)
+            {
+                AddEvent(EventCategory.Preset, "info", "preset applied", preset.Name);
+            }
+
+            return applied;
+        }
+    }
+
+    private ConfigApplyResponse ApplyConfigCore(LiteConfig incoming)
+    {
+        var errors = ValidateConfig(incoming);
+        if (errors.Count > 0)
+        {
+            return new ConfigApplyResponse
+            {
+                Success = false,
+                Message = "config validation failed",
+                AppliedConfig = Clone(_config),
+                Errors = errors
+            };
+        }
+
+        _config = Clone(incoming);
+        PersistConfig();
+        _effectiveConcurrency = Math.Clamp(_effectiveConcurrency, 1, Math.Max(1, _config.MaxConcurrency));
+        AddEvent(EventCategory.Config, "info", "configuration applied", "local user");
+
+        return new ConfigApplyResponse
+        {
+            Success = true,
+            Message = "configuration applied",
+            AppliedConfig = Clone(_config)
+        };
     }
 
     public ServiceCommandResponse Start()
@@ -511,6 +626,28 @@ public sealed class DaemonState
             TokensPerMinute = config.TokensPerMinute,
             BurstAllowance = config.BurstAllowance
         };
+    }
+
+    private static List<PresetDiffItem> BuildDiff(LiteConfig current, LiteConfig target)
+    {
+        var diffs = new List<PresetDiffItem>();
+        var properties = typeof(LiteConfig).GetProperties();
+        foreach (var property in properties)
+        {
+            var before = property.GetValue(current)?.ToString() ?? string.Empty;
+            var after = property.GetValue(target)?.ToString() ?? string.Empty;
+            if (!string.Equals(before, after, StringComparison.Ordinal))
+            {
+                diffs.Add(new PresetDiffItem
+                {
+                    Field = property.Name,
+                    Before = before,
+                    After = after
+                });
+            }
+        }
+
+        return diffs;
     }
 
     private void AddEvent(EventCategory category, string level, string message, string detail)

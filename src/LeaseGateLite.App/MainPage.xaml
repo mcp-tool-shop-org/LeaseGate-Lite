@@ -408,6 +408,9 @@
                     Clicked="OnLoadCustomPresetClicked" />
                 </HorizontalStackLayout>
                 <Label x:Name="PresetStatusLabel" />
+                    <Label x:Name="PresetDiffLabel"
+                       FontFamily="OpenSansSemibold"
+                       FontSize="12" />
                 <Label Text="✅ Covered by: G) Presets"
                    FontSize="12" />
             </VerticalStackLayout>

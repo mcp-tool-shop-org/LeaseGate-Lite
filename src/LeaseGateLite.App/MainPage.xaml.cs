@@ -498,79 +498,45 @@ public partial class MainPage : ContentPage
 		       && left.BurstAllowance == right.BurstAllowance;
 	}
 
-	private void ApplyQuietPreset()
+	private async Task ApplyDaemonPresetAsync(string presetName)
 	{
-		MaxConcurrencySlider.Value = 4;
-		InteractiveReserveSlider.Value = 2;
-		BackgroundCapSlider.Value = 2;
-		SoftThresholdSlider.Value = 60;
-		HardThresholdSlider.Value = 80;
-		RecoveryRateSlider.Value = 15;
-		SmoothingSlider.Value = 70;
-		MaxOutputTokensSlider.Value = 512;
-		MaxPromptTokensSlider.Value = 2048;
-		RequestsPerMinuteSlider.Value = 80;
-		TokensPerMinuteSlider.Value = 80_000;
-		BurstAllowanceSlider.Value = 8;
-		CooldownBehaviorPicker.SelectedItem = CooldownBehavior.Aggressive.ToString();
-		OverflowBehaviorPicker.SelectedItem = OverflowBehavior.QueueOnly.ToString();
+		var preview = await _daemonApiClient.PreviewPresetAsync(presetName, CancellationToken.None);
+		if (preview is not null)
+		{
+			PresetDiffLabel.Text = preview.Diffs.Count == 0
+				? "No config changes."
+				: string.Join(Environment.NewLine, preview.Diffs.Select(d => $"{d.Field}: {d.Before} → {d.After}"));
+		}
+
+		var response = await _daemonApiClient.ApplyPresetAsync(presetName, CancellationToken.None);
+		if (response is null || !response.Success)
+		{
+			PresetStatusLabel.Text = $"Preset apply failed: {presetName}";
+			return;
+		}
+
+		_currentConfig = CloneConfig(response.AppliedConfig);
+		_draftConfig = CloneConfig(response.AppliedConfig);
+		ApplyConfigToControls(_currentConfig);
+		UpdateControlLabels();
+		SetPending(false);
+		PresetStatusLabel.Text = $"Applied preset: {presetName}";
+		await RefreshStatusAndEventsAsync();
 	}
 
-	private void ApplyBalancedPreset()
+	private async void OnQuietPresetClicked(object? sender, EventArgs e)
 	{
-		MaxConcurrencySlider.Value = 8;
-		InteractiveReserveSlider.Value = 2;
-		BackgroundCapSlider.Value = 6;
-		SoftThresholdSlider.Value = 70;
-		HardThresholdSlider.Value = 90;
-		RecoveryRateSlider.Value = 20;
-		SmoothingSlider.Value = 40;
-		MaxOutputTokensSlider.Value = 1024;
-		MaxPromptTokensSlider.Value = 4096;
-		RequestsPerMinuteSlider.Value = 120;
-		TokensPerMinuteSlider.Value = 120_000;
-		BurstAllowanceSlider.Value = 12;
-		CooldownBehaviorPicker.SelectedItem = CooldownBehavior.Mild.ToString();
-		OverflowBehaviorPicker.SelectedItem = OverflowBehavior.TrimOldest.ToString();
+		await ApplyDaemonPresetAsync("Quiet");
 	}
 
-	private void ApplyPerformancePreset()
+	private async void OnBalancedPresetClicked(object? sender, EventArgs e)
 	{
-		MaxConcurrencySlider.Value = 14;
-		InteractiveReserveSlider.Value = 2;
-		BackgroundCapSlider.Value = 12;
-		SoftThresholdSlider.Value = 78;
-		HardThresholdSlider.Value = 95;
-		RecoveryRateSlider.Value = 35;
-		SmoothingSlider.Value = 25;
-		MaxOutputTokensSlider.Value = 2048;
-		MaxPromptTokensSlider.Value = 8192;
-		RequestsPerMinuteSlider.Value = 240;
-		TokensPerMinuteSlider.Value = 240_000;
-		BurstAllowanceSlider.Value = 20;
-		CooldownBehaviorPicker.SelectedItem = CooldownBehavior.Off.ToString();
-		OverflowBehaviorPicker.SelectedItem = OverflowBehavior.TrimOldest.ToString();
+		await ApplyDaemonPresetAsync("Balanced");
 	}
 
-	private void OnQuietPresetClicked(object? sender, EventArgs e)
+	private async void OnPerformancePresetClicked(object? sender, EventArgs e)
 	{
-		ApplyQuietPreset();
-		SetPending(true);
-		PresetStatusLabel.Text = "Quiet preset loaded. Click Apply to commit.";
-	}
-
-	private void OnBalancedPresetClicked(object? sender, EventArgs e)
-	{
-		ApplyBalancedPreset();
-		SetPending(true);
-		PresetStatusLabel.Text = "Balanced preset loaded. Click Apply to commit.";
-	}
-
-	private void OnPerformancePresetClicked(object? sender, EventArgs e)
-	{
-		ApplyPerformancePreset();
-		SetPending(true);
-		PresetStatusLabel.Text = "Performance preset loaded. Click Apply to commit.";
+		await ApplyDaemonPresetAsync("Performance");
 	}
 
 	private void OnSaveCustomPresetClicked(object? sender, EventArgs e)

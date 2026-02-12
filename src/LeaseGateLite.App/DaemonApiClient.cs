@@ -63,4 +63,22 @@ public sealed class DaemonApiClient
     {
         return await _httpClient.GetFromJsonAsync<EventStreamResponse>($"/events/stream?sinceId={sinceId}&timeoutMs={timeoutMs}", cancellationToken);
     }
+
+    public async Task<List<PresetDefinition>?> GetPresetsAsync(CancellationToken cancellationToken)
+    {
+        return await _httpClient.GetFromJsonAsync<List<PresetDefinition>>("/presets", cancellationToken);
+    }
+
+    public async Task<PresetPreviewResponse?> PreviewPresetAsync(string name, CancellationToken cancellationToken)
+    {
+        var response = await _httpClient.PostAsJsonAsync("/preset/preview", new PresetApplyRequest { Name = name }, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<PresetPreviewResponse>(cancellationToken);
+    }
+
+    public async Task<ConfigApplyResponse?> ApplyPresetAsync(string name, CancellationToken cancellationToken)
+    {
+        var response = await _httpClient.PostAsJsonAsync("/preset/apply", new PresetApplyRequest { Name = name }, cancellationToken);
+        return await response.Content.ReadFromJsonAsync<ConfigApplyResponse>(cancellationToken);
+    }
 }

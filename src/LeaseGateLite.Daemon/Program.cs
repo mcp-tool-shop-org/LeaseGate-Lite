@@ -40,5 +40,16 @@ app.MapGet("/events/tail", (int? n, DaemonState daemon) => Results.Ok(daemon.Get
 
 app.MapGet("/events/stream", (long? sinceId, int? timeoutMs, DaemonState daemon) =>
     Results.Ok(daemon.GetEventsSince(sinceId ?? 0, timeoutMs ?? 2500)));
+    
+app.MapGet("/presets", (DaemonState daemon) => Results.Ok(daemon.GetPresets()));
+    
+app.MapPost("/preset/preview", (PresetApplyRequest request, DaemonState daemon) =>
+    Results.Ok(daemon.PreviewPreset(request.Name)));
+    
+app.MapPost("/preset/apply", (PresetApplyRequest request, DaemonState daemon) =>
+{
+    var result = daemon.ApplyPreset(request.Name);
+    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+});
 
 app.Run();
