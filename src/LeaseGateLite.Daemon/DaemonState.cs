@@ -386,6 +386,35 @@ public sealed class DaemonState
         }
     }
 
+    public ServiceCommandResponse SetPressureMode(PressureMode mode)
+    {
+        lock (_lock)
+        {
+            _pressureMode = mode;
+            AddEvent(EventCategory.Pressure, "info", "pressure mode updated", mode.ToString());
+            return new ServiceCommandResponse
+            {
+                Success = true,
+                Message = $"pressure mode set to {mode}"
+            };
+        }
+    }
+
+    public ServiceCommandResponse SimulateFlood(SimulateFloodRequest request)
+    {
+        lock (_lock)
+        {
+            _interactiveDemand = Math.Clamp(request.InteractiveRequests, 0, 200);
+            _backgroundDemand = Math.Clamp(request.BackgroundRequests, 0, 200);
+            AddEvent(EventCategory.Lease, "warn", "flood simulation triggered", $"interactive={_interactiveDemand}; background={_backgroundDemand}");
+            return new ServiceCommandResponse
+            {
+                Success = true,
+                Message = "flood simulation queued"
+            };
+        }
+    }
+
     private void SimulateTick()
     {
         if (!_running)

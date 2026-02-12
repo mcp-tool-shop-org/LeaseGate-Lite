@@ -30,7 +30,8 @@ public partial class MainPage : ContentPage
 			["Shaping"] = CardShaping,
 			["RateLimits"] = CardRateLimits,
 			["Presets"] = CardPresets,
-			["Diagnostics"] = CardDiagnostics
+			["Diagnostics"] = CardDiagnostics,
+			["Audit"] = CardAudit
 		};
 
 		Loaded += OnLoaded;
@@ -584,5 +585,66 @@ public partial class MainPage : ContentPage
 		UpdateControlLabels();
 		SetPending(true);
 		PresetStatusLabel.Text = "Custom preset loaded. Click Apply to commit.";
+	}
+
+	private async void OnRunAuditHarnessClicked(object? sender, EventArgs e)
+	{
+		var lines = new List<string>();
+		void Record(string name, bool pass, string evidence)
+		{
+			lines.Add($"{(pass ? "✅" : "❌")} {name} -- {evidence}");
+		}
+
+		try
+		{
+			await RefreshAllAsync();
+			Record("connect/reconnect", _latestStatus?.Connected == true, _latestStatus?.Connected == true ? "status connected" : "status disconnected");
+
+			await _daemonApiClient.ServiceCommandAsync("restart", CancellationToken.None);
+			await RefreshStatusAndEventsAsync();
+			Record("start/stop/restart", _latestStatus?.DaemonRunning == true, _latestStatus?.DaemonRunning == true ? "daemon running after restart" : "daemon not running");
+
+			var original = await _daemonApiClient.GetConfigAsync(CancellationToken.None) ?? new LiteConfig();
+			var mutated = CloneConfig(original);
+			mutated.MaxConcurrency = Math.Clamp(original.MaxConcurrency == 1 ? 2 : original.MaxConcurrency - 1, 1, 32);
+			var applied = await _daemonApiClient.ApplyConfigAsync(mutated, CancellationToken.None);
+			var reverted = await _daemonApiClient.ApplyConfigAsync(original, CancellationToken.None);
+			Record("apply config + revert", (applied?.Success ?? false) && (reverted?.Success ?? false), "apply and revert roundtrip succeeded");
+
+			var floodConfig = CloneConfig(original);
+			floodConfig.MaxConcurrency = 1;
+			floodConfig.InteractiveReserve = 1;
+			floodConfig.BackgroundCap = 0;
+			await _daemonApiClient.ApplyConfigAsync(floodConfig, CancellationToken.None);
+			await _daemonApiClient.SimulateFloodAsync(25, 25, CancellationToken.None);
+			await Task.Delay(1500);
+			await RefreshStatusAndEventsAsync();
+			var queued = (_latestStatus?.InteractiveQueueDepth ?? 0) + (_latestStatus?.BackgroundQueueDepth ?? 0) > 0;
+			Record("trigger queueing", queued, queued ? "queue depth > 0" : "queue depth did not increase");
+
+			await _daemonApiClient.SetPressureModeAsync(PressureMode.Spiky, CancellationToken.None);
+			await Task.Delay(2200);
+			await RefreshStatusAndEventsAsync();
+			var clamp = _latestStatus?.AdaptiveClampActive == true;
+			Record("trigger adaptive clamp", clamp, clamp ? "adaptive clamp active" : "clamp not active");
+
+			await _daemonApiClient.SetPressureModeAsync(PressureMode.Normal, CancellationToken.None);
+			await _daemonApiClient.ApplyConfigAsync(original, CancellationToken.None);
+
+			var diag = await _daemonApiClient.ExportDiagnosticsAsync(CancellationToken.None);
+			Record("export diagnostics", diag?.Exported == true, diag?.OutputPath ?? "no output path");
+
+			await RefreshStatusAndEventsAsync();
+			var hasMarkers = _eventBuffer.Any(e => e.Message.Contains("configuration applied", StringComparison.OrdinalIgnoreCase))
+			                 && _eventBuffer.Any(e => e.Message.Contains("adaptive clamp", StringComparison.OrdinalIgnoreCase))
+			                 && _eventBuffer.Any(e => e.Message.Contains("diagnostics exported", StringComparison.OrdinalIgnoreCase));
+			Record("verify event markers", hasMarkers, hasMarkers ? "config/clamp/diagnostics markers present" : "missing expected markers");
+		}
+		catch (Exception ex)
+		{
+			Record("audit harness execution", false, ex.Message);
+		}
+
+		AuditResultsEditor.Text = string.Join(Environment.NewLine, lines);
 	}
 }

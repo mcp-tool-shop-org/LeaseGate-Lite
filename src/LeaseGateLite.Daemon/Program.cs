@@ -52,4 +52,10 @@ app.MapPost("/preset/apply", (PresetApplyRequest request, DaemonState daemon) =>
     return result.Success ? Results.Ok(result) : Results.BadRequest(result);
 });
 
+app.MapPost("/simulate/pressure", (SimulatePressureRequest request, DaemonState daemon) =>
+    Results.Ok(daemon.SetPressureMode(request.Mode)));
+
+app.MapPost("/simulate/flood", (SimulateFloodRequest request, DaemonState daemon) =>
+    Results.Ok(daemon.SimulateFlood(request)));
+
 app.Run();

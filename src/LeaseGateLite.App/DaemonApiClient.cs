@@ -81,4 +81,22 @@ public sealed class DaemonApiClient
         var response = await _httpClient.PostAsJsonAsync("/preset/apply", new PresetApplyRequest { Name = name }, cancellationToken);
         return await response.Content.ReadFromJsonAsync<ConfigApplyResponse>(cancellationToken);
     }
+
+    public async Task<ServiceCommandResponse?> SetPressureModeAsync(PressureMode mode, CancellationToken cancellationToken)
+    {
+        var response = await _httpClient.PostAsJsonAsync("/simulate/pressure", new SimulatePressureRequest { Mode = mode }, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ServiceCommandResponse>(cancellationToken);
+    }
+
+    public async Task<ServiceCommandResponse?> SimulateFloodAsync(int interactiveRequests, int backgroundRequests, CancellationToken cancellationToken)
+    {
+        var response = await _httpClient.PostAsJsonAsync("/simulate/flood", new SimulateFloodRequest
+        {
+            InteractiveRequests = interactiveRequests,
+            BackgroundRequests = backgroundRequests
+        }, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ServiceCommandResponse>(cancellationToken);
+    }
 }
