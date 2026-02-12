@@ -6,6 +6,7 @@ namespace LeaseGateLite.App;
 public partial class MainPage : ContentPage
 {
 	private const string CustomPresetKey = "leasegatelite.custom.preset";
+	private const string FirstRunCompletedKey = "leasegatelite.firstRun.completed";
 	private readonly DaemonApiClient _daemonApiClient;
 	private readonly Dictionary<string, Border> _sectionCards;
 	private StatusSnapshot? _latestStatus;
@@ -22,6 +23,9 @@ public partial class MainPage : ContentPage
 	private readonly List<EventEntry> _eventBuffer = new();
 	private readonly List<SeenClient> _recentProfileApps = new();
 	private ProfilesSnapshotResponse? _profiles;
+	private string _firstRunGoal = "Balanced";
+	private bool _firstRunKeepUiResponsive = true;
+	private bool _firstRunStartOnLogin;
 
 	public MainPage(DaemonApiClient daemonApiClient)
 	{
@@ -50,6 +54,7 @@ public partial class MainPage : ContentPage
 		ModePicker.SelectedIndex = 1;
 		OnSizeChanged(sender, e);
 		await RefreshAllAsync();
+		InitializeFirstRunState();
 
 		Dispatcher.StartTimer(TimeSpan.FromSeconds(2), () =>
 		{
@@ -133,6 +138,8 @@ public partial class MainPage : ContentPage
 			StartOnLoginSwitch.IsEnabled = status.Supported;
 			StartOnLoginSwitch.IsToggled = status.Enabled;
 			StartOnLoginStatusLabel.Text = status.Message;
+			_firstRunStartOnLogin = status.Enabled;
+			FirstRunStartOnLoginSwitch.IsToggled = status.Enabled;
 		}
 		catch
 		{
@@ -423,6 +430,80 @@ public partial class MainPage : ContentPage
 	private async void OnReconnectClicked(object? sender, EventArgs e)
 	{
 		await RefreshAllAsync();
+	}
+
+	private void InitializeFirstRunState()
+	{
+		var completed = Preferences.Default.Get(FirstRunCompletedKey, false);
+		FirstRunBanner.IsVisible = !completed;
+		FirstRunCompleteChip.IsVisible = completed;
+
+		if (completed)
+		{
+			return;
+		}
+
+		_firstRunGoal = "Balanced";
+		_firstRunKeepUiResponsive = true;
+		FirstRunBalancedRadio.IsChecked = true;
+		FirstRunResponsiveSwitch.IsToggled = true;
+		FirstRunStartOnLoginSwitch.IsToggled = StartOnLoginSwitch.IsToggled;
+		FirstRunStatusLabel.Text = "";
+	}
+
+	private void OnFirstRunGoalChanged(object? sender, CheckedChangedEventArgs e)
+	{
+		if (!e.Value || sender is not RadioButton radioButton)
+		{
+			return;
+		}
+
+		_firstRunGoal = radioButton.Content?.ToString() ?? "Balanced";
+	}
+
+	private void OnFirstRunToggleChanged(object? sender, ToggledEventArgs e)
+	{
+		_firstRunKeepUiResponsive = FirstRunResponsiveSwitch.IsToggled;
+		_firstRunStartOnLogin = FirstRunStartOnLoginSwitch.IsToggled;
+	}
+
+	private async void OnCompleteFirstRunClicked(object? sender, EventArgs e)
+	{
+		try
+		{
+			await ApplyDaemonPresetAsync(_firstRunGoal);
+
+			if (_firstRunKeepUiResponsive)
+			{
+				var adjusted = CloneConfig(_currentConfig);
+				adjusted.InteractiveReserve = Math.Max(2, adjusted.InteractiveReserve);
+				adjusted.BackgroundCap = Math.Max(0, Math.Min(adjusted.BackgroundCap, Math.Max(1, adjusted.MaxConcurrency - adjusted.InteractiveReserve)));
+				var applyResult = await _daemonApiClient.ApplyConfigAsync(adjusted, CancellationToken.None);
+				if (applyResult is not null && applyResult.Success)
+				{
+					_currentConfig = CloneConfig(applyResult.AppliedConfig);
+					_draftConfig = CloneConfig(applyResult.AppliedConfig);
+					ApplyConfigToControls(_currentConfig);
+					UpdateControlLabels();
+				}
+			}
+
+			if (_firstRunStartOnLogin != StartOnLoginSwitch.IsToggled)
+			{
+				await _daemonApiClient.SetAutostartAsync(_firstRunStartOnLogin, CancellationToken.None);
+				await RefreshAutostartAsync();
+			}
+
+			Preferences.Default.Set(FirstRunCompletedKey, true);
+			FirstRunBanner.IsVisible = false;
+			FirstRunCompleteChip.IsVisible = true;
+			FirstRunStatusLabel.Text = "Setup complete.";
+			ConfigStatusLabel.Text = "First-run setup complete. You can leave defaults as-is.";
+		}
+		catch
+		{
+			FirstRunStatusLabel.Text = "Could not complete setup. Reconnect daemon and try again.";
+		}
 	}
 
 	private void OnToggleThrottleReasonsClicked(object? sender, EventArgs e)

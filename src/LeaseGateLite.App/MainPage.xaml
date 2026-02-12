@@ -22,7 +22,7 @@
     </x:Array>
     </ContentPage.Resources>
 
-        <Grid RowDefinitions="Auto,*"
+        <Grid RowDefinitions="Auto,Auto,*"
             Padding="16"
             RowSpacing="14">
 
@@ -87,7 +87,91 @@
         </Grid>
     </Border>
 
-    <Grid Grid.Row="1"
+    <Grid Grid.Row="1">
+        <Border x:Name="FirstRunBanner"
+                IsVisible="False"
+                StrokeShape="RoundRectangle 14"
+                Padding="12"
+                BackgroundColor="{AppThemeBinding Light=#F3F8FF, Dark=#1E2630}">
+            <VerticalStackLayout Spacing="10">
+                <Label Text="First-time setup: set it and forget it"
+                       FontAttributes="Bold"
+                       FontSize="16" />
+                <Label Text="Pick a goal, choose optional comfort toggles, and finish in under 30 seconds."
+                       FontSize="12" />
+
+                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                    <Border StrokeShape="RoundRectangle 10" Padding="8" BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1F1F1F}">
+                        <VerticalStackLayout Spacing="6">
+                            <RadioButton x:Name="FirstRunQuietRadio"
+                                         GroupName="FirstRunGoal"
+                                         Content="Quiet"
+                                         CheckedChanged="OnFirstRunGoalChanged" />
+                            <Label Text="Keeps fan noise and heat low for everyday use."
+                                   FontSize="12" />
+                        </VerticalStackLayout>
+                    </Border>
+                    <Border Grid.Column="1" StrokeShape="RoundRectangle 10" Padding="8" BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1F1F1F}">
+                        <VerticalStackLayout Spacing="6">
+                            <RadioButton x:Name="FirstRunBalancedRadio"
+                                         GroupName="FirstRunGoal"
+                                         Content="Balanced"
+                                         CheckedChanged="OnFirstRunGoalChanged" />
+                            <Label Text="Best default for mixed AI work and normal desktop usage."
+                                   FontSize="12" />
+                        </VerticalStackLayout>
+                    </Border>
+                    <Border Grid.Column="2" StrokeShape="RoundRectangle 10" Padding="8" BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1F1F1F}">
+                        <VerticalStackLayout Spacing="6">
+                            <RadioButton x:Name="FirstRunPerformanceRadio"
+                                         GroupName="FirstRunGoal"
+                                         Content="Performance"
+                                         CheckedChanged="OnFirstRunGoalChanged" />
+                            <Label Text="Pushes throughput higher when your PC has headroom."
+                                   FontSize="12" />
+                        </VerticalStackLayout>
+                    </Border>
+                </Grid>
+
+                <HorizontalStackLayout Spacing="12">
+                    <HorizontalStackLayout Spacing="6">
+                        <Switch x:Name="FirstRunResponsiveSwitch"
+                                IsToggled="True"
+                                Toggled="OnFirstRunToggleChanged" />
+                        <Label Text="Keep UI responsive"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout Spacing="6">
+                        <Switch x:Name="FirstRunStartOnLoginSwitch"
+                                Toggled="OnFirstRunToggleChanged" />
+                        <Label Text="Start on login"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </HorizontalStackLayout>
+
+                <HorizontalStackLayout Spacing="8">
+                    <Button Text="Complete setup"
+                            Clicked="OnCompleteFirstRunClicked" />
+                    <Label x:Name="FirstRunStatusLabel"
+                           FontSize="12"
+                           VerticalOptions="Center" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+        </Border>
+
+        <Border x:Name="FirstRunCompleteChip"
+                IsVisible="False"
+                Padding="8,4"
+                StrokeShape="RoundRectangle 10"
+                HorizontalOptions="Start"
+                BackgroundColor="{AppThemeBinding Light=#E9F7EF, Dark=#1F3A2F}">
+            <Label Text="Setup complete"
+                   FontSize="12"
+                   FontAttributes="Bold" />
+        </Border>
+    </Grid>
+
+    <Grid Grid.Row="2"
           x:Name="BodyGrid"
           ColumnDefinitions="320,*"
           ColumnSpacing="12">
