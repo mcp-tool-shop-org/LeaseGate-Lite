@@ -20,6 +20,7 @@ public partial class MainPage : ContentPage
 	private bool _ignoreProfileEvents;
 	private int _eventReconnectDelayMs = 500;
 	private bool _daemonReachable = true;
+	private readonly bool _animationsEnabled = !Preferences.Default.Get("leasegatelite.reduceMotion", false);
 	private long _lastEventId;
 	private readonly List<EventEntry> _eventBuffer = new();
 	private readonly List<SeenClient> _recentProfileApps = new();
@@ -328,12 +329,28 @@ public partial class MainPage : ContentPage
 			ConfigStatusLabel.Text = "Daemon not running. Start daemon to apply or revert settings.";
 		}
 
-		StatusDot.Color = status.HeatState switch
+		var nextColor = status.HeatState switch
 		{
 			HeatState.Calm => Color.FromArgb("#3CB371"),
 			HeatState.Warm => Color.FromArgb("#E8B100"),
 			_ => Color.FromArgb("#D9534F")
 		};
+
+		if (_animationsEnabled && StatusDot.Color != nextColor)
+		{
+			_ = AnimateHeatBadgeAsync(nextColor);
+		}
+		else
+		{
+			StatusDot.Color = nextColor;
+		}
+	}
+
+	private async Task AnimateHeatBadgeAsync(Color nextColor)
+	{
+		await StatusDot.ScaleToAsync(0.85, 90, Easing.CubicInOut);
+		StatusDot.Color = nextColor;
+		await StatusDot.ScaleToAsync(1.0, 120, Easing.CubicOut);
 	}
 
 	private void UpdateControlLabels()
@@ -512,9 +529,34 @@ public partial class MainPage : ContentPage
 	private void SetPending(bool pending)
 	{
 		_hasPendingChanges = pending;
+		var changedFieldCount = pending ? CountConfigChanges(_draftConfig, _currentConfig) : 0;
 		PendingPill.IsVisible = pending;
 		StickyPendingPill.IsVisible = pending;
-		StickyPendingStatusLabel.Text = pending ? "Changes are pending. Apply or revert anytime." : "No pending changes.";
+		PendingPillLabel.Text = pending ? $"Unsaved draft ({changedFieldCount})" : "Unsaved draft";
+		StickyPendingPillLabel.Text = pending ? $"Pending changes ({changedFieldCount})" : "Pending changes";
+		StickyPendingStatusLabel.Text = pending ? $"{changedFieldCount} field(s) changed. Apply or revert anytime." : "No pending changes.";
+	}
+
+	private static int CountConfigChanges(LiteConfig left, LiteConfig right)
+	{
+		var count = 0;
+		if (left.MaxConcurrency != right.MaxConcurrency) count++;
+		if (left.InteractiveReserve != right.InteractiveReserve) count++;
+		if (left.BackgroundCap != right.BackgroundCap) count++;
+		if (left.CooldownBehavior != right.CooldownBehavior) count++;
+		if (left.SoftThresholdPercent != right.SoftThresholdPercent) count++;
+		if (left.HardThresholdPercent != right.HardThresholdPercent) count++;
+		if (left.RecoveryRatePercent != right.RecoveryRatePercent) count++;
+		if (left.SmoothingPercent != right.SmoothingPercent) count++;
+		if (left.MaxOutputTokensClamp != right.MaxOutputTokensClamp) count++;
+		if (left.MaxPromptTokensClamp != right.MaxPromptTokensClamp) count++;
+		if (left.OverflowBehavior != right.OverflowBehavior) count++;
+		if (left.MaxRetries != right.MaxRetries) count++;
+		if (left.RetryBackoffMs != right.RetryBackoffMs) count++;
+		if (left.RequestsPerMinute != right.RequestsPerMinute) count++;
+		if (left.TokensPerMinute != right.TokensPerMinute) count++;
+		if (left.BurstAllowance != right.BurstAllowance) count++;
+		return count;
 	}
 
 	private void ApplyConfigToControls(LiteConfig config)
@@ -697,6 +739,11 @@ public partial class MainPage : ContentPage
 		}
 
 		await ControlScroll.ScrollToAsync(card, ScrollToPosition.Start, true);
+		if (_animationsEnabled)
+		{
+			await card.FadeToAsync(0.75, 70, Easing.CubicInOut);
+			await card.FadeToAsync(1.0, 120, Easing.CubicOut);
+		}
 	}
 
 	private async void OnInlineHelpClicked(object? sender, EventArgs e)
@@ -828,6 +875,17 @@ public partial class MainPage : ContentPage
 
 	private async void OnStopClicked(object? sender, EventArgs e)
 	{
+		var confirm = await DisplayAlertAsync(
+			"Stop daemon?",
+			"Stopping the daemon will pause throttling for all apps until you start it again.",
+			"Stop daemon",
+			"Cancel");
+
+		if (!confirm)
+		{
+			return;
+		}
+
 		await ExecuteServiceCommandAsync("stop");
 	}
 
@@ -893,6 +951,17 @@ public partial class MainPage : ContentPage
 
 	private async void OnResetDefaultsClicked(object? sender, EventArgs e)
 	{
+		var confirm = await DisplayAlertAsync(
+			"Reset draft to defaults?",
+			"This replaces your current draft settings. It will not take effect until you click Apply.",
+			"Reset draft",
+			"Cancel");
+
+		if (!confirm)
+		{
+			return;
+		}
+
 		var response = await _daemonApiClient.ResetConfigAsync(false, CancellationToken.None);
 		if (response is null)
 		{

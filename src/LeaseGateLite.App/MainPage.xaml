@@ -64,7 +64,8 @@
                 Padding="8,2"
                 StrokeShape="RoundRectangle 10"
                 BackgroundColor="{AppThemeBinding Light=#FFF3CD, Dark=#5C4B00}">
-            <Label Text="Unsaved draft"
+                 <Label x:Name="PendingPillLabel"
+                     Text="Unsaved draft"
                    FontSize="12"
                    FontAttributes="Bold" />
             </Border>
@@ -189,7 +190,8 @@
                     Padding="8,2"
                     StrokeShape="RoundRectangle 10"
                     BackgroundColor="{AppThemeBinding Light=#FFF3CD, Dark=#5C4B00}">
-                <Label Text="Pending changes"
+                  <Label x:Name="StickyPendingPillLabel"
+                      Text="Pending changes"
                        FontSize="12"
                        FontAttributes="Bold" />
             </Border>

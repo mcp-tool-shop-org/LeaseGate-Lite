@@ -154,7 +154,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     private async Task ExitDaemonAsync()
     {
-        var result = MessageBox.Show("Exit LeaseGate Lite daemon?", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+        var result = MessageBox.Show("Stopping the daemon will pause throttling for all apps until it is started again. Continue?", "Stop daemon", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
         if (result != DialogResult.Yes)
         {
             return;
