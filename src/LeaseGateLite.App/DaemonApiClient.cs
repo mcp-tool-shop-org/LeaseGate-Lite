@@ -58,6 +58,17 @@ public sealed class DaemonApiClient
         return await response.Content.ReadFromJsonAsync<ServiceCommandResponse>(cancellationToken);
     }
 
+    public async Task<NotificationsSettingsResponse?> GetNotificationsSettingsAsync(CancellationToken cancellationToken)
+    {
+        return await _httpClient.GetFromJsonAsync<NotificationsSettingsResponse>("/notifications", cancellationToken);
+    }
+
+    public async Task<ServiceCommandResponse?> SetNotificationsSettingsAsync(bool enabled, CancellationToken cancellationToken)
+    {
+        var response = await _httpClient.PostAsJsonAsync("/notifications", new NotificationsUpdateRequest { Enabled = enabled }, cancellationToken);
+        return await response.Content.ReadFromJsonAsync<ServiceCommandResponse>(cancellationToken);
+    }
+
     public async Task<DiagnosticsExportResponse?> ExportDiagnosticsAsync(bool includePaths, CancellationToken cancellationToken)
     {
         var response = await _httpClient.PostAsync($"/diagnostics/export?includePaths={includePaths.ToString().ToLowerInvariant()}", null, cancellationToken);

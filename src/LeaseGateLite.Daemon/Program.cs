@@ -119,6 +119,14 @@ app.MapPost("/autostart", (AutostartUpdateRequest request) =>
     return result.Success ? Results.Ok(result) : Results.BadRequest(result);
 });
 
+app.MapGet("/notifications", (DaemonState daemon) => Results.Ok(daemon.GetNotificationsSettings()));
+
+app.MapPost("/notifications", (NotificationsUpdateRequest request, DaemonState daemon) =>
+{
+    var result = daemon.SetNotificationsEnabled(request.Enabled);
+    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+});
+
 app.MapPost("/diagnostics/export", (bool? includePaths, DaemonState daemon) => Results.Ok(daemon.ExportDiagnostics(includePaths ?? false)));
 
 app.MapGet("/events/tail", (int? n, DaemonState daemon) => Results.Ok(daemon.GetEvents(n ?? 200)));

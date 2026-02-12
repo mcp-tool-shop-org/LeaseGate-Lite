@@ -44,3 +44,14 @@ public sealed class AutostartUpdateRequest
 {
     public bool Enabled { get; set; }
 }
+
+public sealed class NotificationsSettingsResponse
+{
+    public bool Enabled { get; set; }
+    public string Message { get; set; } = string.Empty;
+}
+
+public sealed class NotificationsUpdateRequest
+{
+    public bool Enabled { get; set; }
+}

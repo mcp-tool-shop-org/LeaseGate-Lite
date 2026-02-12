@@ -340,12 +340,31 @@
                 <Label x:Name="PressureLabel"
                    FontFamily="OpenSansSemibold" />
                 <Label x:Name="LastReasonLabel" />
+                  <HorizontalStackLayout Spacing="8">
+                      <Label Text="Tray notifications"
+                          VerticalOptions="Center" />
+                      <Switch x:Name="NotificationsSwitch"
+                        Toggled="OnNotificationsToggled" />
+                      <Label x:Name="NotificationsStatusLabel"
+                          FontSize="12"
+                          VerticalOptions="Center" />
+                  </HorizontalStackLayout>
                   <Button x:Name="WhyThrottledButton"
                        Text="Why am I throttled?"
                        Clicked="OnToggleThrottleReasonsClicked" />
                   <Label x:Name="ThrottleReasonsLabel"
                       IsVisible="False"
                       FontSize="12" />
+                  <Label Text="What changed?"
+                      FontAttributes="Bold" />
+                  <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="8">
+                      <Label x:Name="Decision1Label" Grid.Row="0" Grid.Column="0" FontSize="12" />
+                      <Button x:Name="Decision1Button" Grid.Row="0" Grid.Column="1" Text="Open" Clicked="OnDecisionJumpClicked" />
+                      <Label x:Name="Decision2Label" Grid.Row="1" Grid.Column="0" FontSize="12" />
+                      <Button x:Name="Decision2Button" Grid.Row="1" Grid.Column="1" Text="Open" Clicked="OnDecisionJumpClicked" />
+                      <Label x:Name="Decision3Label" Grid.Row="2" Grid.Column="0" FontSize="12" />
+                      <Button x:Name="Decision3Button" Grid.Row="2" Grid.Column="1" Text="Open" Clicked="OnDecisionJumpClicked" />
+                  </Grid>
                 <Label Text="✅ Covered by: B) Live status"
                    FontSize="12" />
             </VerticalStackLayout>

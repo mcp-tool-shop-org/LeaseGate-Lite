@@ -16,6 +16,7 @@ public partial class MainPage : ContentPage
 	private bool _hasPendingChanges;
 	private bool _pauseEvents;
 	private bool _ignoreAutostartToggle;
+	private bool _ignoreNotificationsToggle;
 	private bool _ignoreProfileEvents;
 	private int _eventReconnectDelayMs = 500;
 	private bool _daemonReachable = true;
@@ -85,7 +86,32 @@ public partial class MainPage : ContentPage
 		await RefreshStatusAndEventsAsync();
 		await RefreshConfigAsync();
 		await RefreshAutostartAsync();
+		await RefreshNotificationsAsync();
 		await RefreshProfilesAsync();
+	}
+
+	private async Task RefreshNotificationsAsync()
+	{
+		try
+		{
+			var settings = await _daemonApiClient.GetNotificationsSettingsAsync(CancellationToken.None);
+			if (settings is null)
+			{
+				return;
+			}
+
+			_ignoreNotificationsToggle = true;
+			NotificationsSwitch.IsToggled = settings.Enabled;
+			NotificationsStatusLabel.Text = settings.Message;
+		}
+		catch
+		{
+			NotificationsStatusLabel.Text = "notifications unavailable";
+		}
+		finally
+		{
+			_ignoreNotificationsToggle = false;
+		}
 	}
 
 	private async Task RefreshProfilesAsync()
@@ -280,14 +306,15 @@ public partial class MainPage : ContentPage
 		ClampStateLabel.Text = status.AdaptiveClampActive ? "Adaptive clamp active" : "Clamp inactive";
 		LiveNumbersLabel.Text = $"Active: {status.ActiveCalls}   Queue: {status.InteractiveQueueDepth}/{status.BackgroundQueueDepth}   Effective concurrency: {status.EffectiveConcurrency}";
 		PressureLabel.Text = $"CPU: {status.CpuPercent}%   Available RAM: {status.AvailableRamPercent}%";
-		LastReasonLabel.Text = $"Last throttle reason: {status.LastThrottleReason}";
+		LastReasonLabel.Text = BuildFriendlyThrottleSentence(status.LastThrottleReason);
 		ThrottleReasonsLabel.Text = status.RecentThrottleReasons.Count == 0
 			? "No recent throttle reasons."
 			: string.Join(Environment.NewLine, status.RecentThrottleReasons
 				.TakeLast(3)
 				.Reverse()
-				.Select(r => $"{r.TimestampUtc:HH:mm:ss} — {r.Reason} ({r.Detail})"));
+				.Select(r => $"{r.TimestampUtc:HH:mm:ss} — {BuildFriendlyThrottleSentence(r.Reason)}"));
 		EffectiveConcurrencyPreviewLabel.Text = $"Effective concurrency right now: {status.EffectiveConcurrency}";
+		UpdateDecisionFeed(status);
 		UpdateControlLabels();
 
 		StatusDot.Color = status.HeatState switch
@@ -344,6 +371,65 @@ public partial class MainPage : ContentPage
 		var ratio = (cpuPercent - softThreshold) / (double)Math.Max(1, hardThreshold - softThreshold);
 		var reduced = maxConcurrency - (int)Math.Round((maxConcurrency - 1) * ratio);
 		return Math.Max(1, reduced);
+	}
+
+	private void UpdateDecisionFeed(StatusSnapshot status)
+	{
+		var items = status.RecentThrottleReasons
+			.TakeLast(3)
+			.Reverse()
+			.Select(item =>
+			{
+				var target = GetControlTargetForReason(item.Reason);
+				var text = $"{item.TimestampUtc:HH:mm:ss} — {BuildFriendlyThrottleSentence(item.Reason)}";
+				return (text, target);
+			})
+			.ToList();
+
+		ApplyDecisionRow(Decision1Label, Decision1Button, items.ElementAtOrDefault(0));
+		ApplyDecisionRow(Decision2Label, Decision2Button, items.ElementAtOrDefault(1));
+		ApplyDecisionRow(Decision3Label, Decision3Button, items.ElementAtOrDefault(2));
+	}
+
+	private static void ApplyDecisionRow(Label label, Button button, (string text, string target) item)
+	{
+		if (string.IsNullOrWhiteSpace(item.text))
+		{
+			label.Text = "—";
+			button.IsEnabled = false;
+			button.CommandParameter = null;
+			return;
+		}
+
+		label.Text = item.text;
+		button.IsEnabled = true;
+		button.CommandParameter = item.target;
+	}
+
+	private static string BuildFriendlyThrottleSentence(ThrottleReason reason)
+	{
+		return reason switch
+		{
+			ThrottleReason.CpuPressure => "CPU is busy, so I'm running fewer AI calls to keep things smooth.",
+			ThrottleReason.MemoryPressure => "Memory is tight, so I'm queueing background work.",
+			ThrottleReason.Cooldown => "Pressure stayed high, so I entered cooldown to help your system recover.",
+			ThrottleReason.RateLimit => "Rate limits are active to avoid bursts that can cause stutter.",
+			ThrottleReason.ManualClamp => "A manual safety limit is active for predictable behavior.",
+			_ => "System is steady and no throttle action is currently needed."
+		};
+	}
+
+	private static string GetControlTargetForReason(ThrottleReason reason)
+	{
+		return reason switch
+		{
+			ThrottleReason.CpuPressure => "Adaptive",
+			ThrottleReason.MemoryPressure => "Adaptive",
+			ThrottleReason.Cooldown => "Concurrency",
+			ThrottleReason.RateLimit => "RateLimits",
+			ThrottleReason.ManualClamp => "Concurrency",
+			_ => "LiveStatus"
+		};
 	}
 
 	private void UpdateProfileLabels()
@@ -540,6 +626,32 @@ public partial class MainPage : ContentPage
 	{
 		ThrottleReasonsLabel.IsVisible = !ThrottleReasonsLabel.IsVisible;
 		WhyThrottledButton.Text = ThrottleReasonsLabel.IsVisible ? "Hide throttle details" : "Why am I throttled?";
+	}
+
+	private async void OnNotificationsToggled(object? sender, ToggledEventArgs e)
+	{
+		if (_ignoreNotificationsToggle)
+		{
+			return;
+		}
+
+		var result = await _daemonApiClient.SetNotificationsSettingsAsync(e.Value, CancellationToken.None);
+		NotificationsStatusLabel.Text = result?.Message ?? "notifications update failed";
+	}
+
+	private async void OnDecisionJumpClicked(object? sender, EventArgs e)
+	{
+		if (sender is not Button button || button.CommandParameter is not string key)
+		{
+			return;
+		}
+
+		if (!_sectionCards.TryGetValue(key, out var card))
+		{
+			return;
+		}
+
+		await ControlScroll.ScrollToAsync(card, ScrollToPosition.Start, true);
 	}
 
 	private void OnRecentAppChanged(object? sender, EventArgs e)

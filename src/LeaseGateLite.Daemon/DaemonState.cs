@@ -15,6 +15,7 @@ public sealed class DaemonState
     private readonly string _configPath;
     private readonly string _diagnosticsDirectory;
     private readonly string _eventLogPath;
+    private readonly string _notificationsPath;
     private readonly Dictionary<string, SeenClient> _recentClients = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, AppProfileOverride> _profileOverrides = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, (int Interactive, int Background)> _appDemands = new(StringComparer.OrdinalIgnoreCase);
@@ -43,6 +44,7 @@ public sealed class DaemonState
     private bool _degradedMode;
     private string _degradedReason = string.Empty;
     private bool _backgroundPaused;
+    private bool _notificationsEnabled;
 
     public DaemonState()
     {
@@ -50,10 +52,12 @@ public sealed class DaemonState
         _configPath = Path.Combine(_runtimeDirectory, "leasegatelite.config.json");
         _diagnosticsDirectory = Path.Combine(_runtimeDirectory, "diagnostics");
         _eventLogPath = Path.Combine(_runtimeDirectory, "leasegatelite-events.jsonl");
+        _notificationsPath = Path.Combine(_runtimeDirectory, "leasegatelite.notifications.json");
         Directory.CreateDirectory(_runtimeDirectory);
         Directory.CreateDirectory(_diagnosticsDirectory);
 
         _config = LoadConfig() ?? DefaultConfig();
+        _notificationsEnabled = LoadNotificationsEnabled();
         _running = true;
         _startedAtUtc = DateTimeOffset.UtcNow;
         _effectiveConcurrency = _config.MaxConcurrency;
@@ -319,6 +323,33 @@ public sealed class DaemonState
             {
                 Success = true,
                 Message = paused ? "background work paused" : "background work resumed"
+            };
+        }
+    }
+
+    public NotificationsSettingsResponse GetNotificationsSettings()
+    {
+        lock (_lock)
+        {
+            return new NotificationsSettingsResponse
+            {
+                Enabled = _notificationsEnabled,
+                Message = _notificationsEnabled ? "notifications enabled" : "notifications disabled"
+            };
+        }
+    }
+
+    public ServiceCommandResponse SetNotificationsEnabled(bool enabled)
+    {
+        lock (_lock)
+        {
+            _notificationsEnabled = enabled;
+            PersistNotificationsEnabled();
+            AddEvent(EventCategory.Diagnostics, "info", enabled ? "notifications enabled" : "notifications disabled", "tray opt-in");
+            return new ServiceCommandResponse
+            {
+                Success = true,
+                Message = enabled ? "notifications enabled" : "notifications disabled"
             };
         }
     }
@@ -917,6 +948,35 @@ public sealed class DaemonState
         {
             return null;
         }
+    }
+
+    private bool LoadNotificationsEnabled()
+    {
+        if (!File.Exists(_notificationsPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            var json = File.ReadAllText(_notificationsPath);
+            var payload = JsonSerializer.Deserialize<NotificationsSettingsResponse>(json);
+            return payload?.Enabled == true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void PersistNotificationsEnabled()
+    {
+        var json = JsonSerializer.Serialize(new NotificationsSettingsResponse
+        {
+            Enabled = _notificationsEnabled,
+            Message = _notificationsEnabled ? "notifications enabled" : "notifications disabled"
+        }, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(_notificationsPath, json);
     }
 
     private static LiteConfig DefaultConfig()

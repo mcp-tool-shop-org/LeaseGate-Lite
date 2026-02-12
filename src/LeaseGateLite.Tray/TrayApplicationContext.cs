@@ -11,6 +11,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly NotifyIcon _notifyIcon;
     private readonly System.Windows.Forms.Timer _pollTimer;
     private readonly ToolStripMenuItem _pauseBackgroundItem;
+    private readonly ToolStripMenuItem _notificationsItem;
     private DateTimeOffset _lastNotificationUtc = DateTimeOffset.MinValue;
 
     public TrayApplicationContext()
@@ -36,6 +37,13 @@ internal sealed class TrayApplicationContext : ApplicationContext
         };
         _pauseBackgroundItem.Click += async (_, _) => await SetPauseBackgroundAsync(_pauseBackgroundItem.Checked);
         menu.Items.Add(_pauseBackgroundItem);
+
+        _notificationsItem = new ToolStripMenuItem("Enable notifications")
+        {
+            CheckOnClick = true
+        };
+        _notificationsItem.Click += async (_, _) => await SetNotificationsEnabledAsync(_notificationsItem.Checked);
+        menu.Items.Add(_notificationsItem);
 
         menu.Items.Add("Exit daemon", null, async (_, _) => await ExitDaemonAsync());
         menu.Items.Add(new ToolStripSeparator());
@@ -87,7 +95,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
             _notifyIcon.Text = $"LeaseGate Lite: {status.HeatState} | Eff {status.EffectiveConcurrency} | Q {queueDepth}";
             _pauseBackgroundItem.Checked = status.BackgroundPaused;
 
-            MaybeNotify(status, queueDepth);
+            var notificationSettings = await _httpClient.GetFromJsonAsync<NotificationsSettingsResponse>("/notifications");
+            _notificationsItem.Checked = notificationSettings?.Enabled == true;
+
+            MaybeNotify(status, queueDepth, notificationSettings?.Enabled == true);
         }
         catch
         {
@@ -96,8 +107,13 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
     }
 
-    private void MaybeNotify(StatusSnapshot status, int queueDepth)
+    private void MaybeNotify(StatusSnapshot status, int queueDepth, bool enabled)
     {
+        if (!enabled)
+        {
+            return;
+        }
+
         var now = DateTimeOffset.UtcNow;
         if (now - _lastNotificationUtc < TimeSpan.FromMinutes(2))
         {
@@ -127,6 +143,12 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private async Task SetPauseBackgroundAsync(bool paused)
     {
         var response = await _httpClient.PostAsync($"/service/pause-background?paused={paused.ToString().ToLowerInvariant()}", null);
+        response.EnsureSuccessStatusCode();
+    }
+
+    private async Task SetNotificationsEnabledAsync(bool enabled)
+    {
+        var response = await _httpClient.PostAsJsonAsync("/notifications", new NotificationsUpdateRequest { Enabled = enabled });
         response.EnsureSuccessStatusCode();
     }
 
