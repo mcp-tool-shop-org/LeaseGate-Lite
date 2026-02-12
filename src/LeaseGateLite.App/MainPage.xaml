@@ -22,7 +22,7 @@
     </x:Array>
     </ContentPage.Resources>
 
-        <Grid RowDefinitions="Auto,Auto,*"
+        <Grid RowDefinitions="Auto,Auto,Auto,*"
             Padding="16"
             RowSpacing="14">
 
@@ -73,13 +73,17 @@
         <HorizontalStackLayout Grid.Column="2"
                        Spacing="8"
                        VerticalOptions="Center">
-            <Button Text="Start"
+            <Button x:Name="HeaderStartButton"
+                Text="Start"
                 Clicked="OnStartClicked" />
-            <Button Text="Stop"
+            <Button x:Name="HeaderStopButton"
+                Text="Stop"
                 Clicked="OnStopClicked" />
-            <Button Text="Apply"
+            <Button x:Name="HeaderApplyButton"
+                Text="Apply"
                 Clicked="OnApplyClicked" />
-            <Button Text="Revert"
+            <Button x:Name="HeaderRevertButton"
+                Text="Revert"
                 Clicked="OnRevertClicked" />
             <Button Text="Export"
                 Clicked="OnExportDiagnosticsClicked" />
@@ -171,7 +175,35 @@
         </Border>
     </Grid>
 
-    <Grid Grid.Row="2"
+    <Border Grid.Row="2"
+            StrokeShape="RoundRectangle 10"
+            Padding="8"
+            BackgroundColor="{AppThemeBinding Light=#F4F5F7, Dark=#232323}">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" VerticalOptions="Center">
+            <Border x:Name="StickyPendingPill"
+                    IsVisible="False"
+                    Grid.Column="0"
+                    Padding="8,2"
+                    StrokeShape="RoundRectangle 10"
+                    BackgroundColor="{AppThemeBinding Light=#FFF3CD, Dark=#5C4B00}">
+                <Label Text="Pending changes"
+                       FontSize="12"
+                       FontAttributes="Bold" />
+            </Border>
+            <Label Grid.Column="1"
+                   x:Name="StickyPendingStatusLabel"
+                   FontSize="12"
+                   VerticalOptions="Center" />
+            <Button Grid.Column="2"
+                    Text="Apply"
+                    Clicked="OnApplyClicked" />
+            <Button Grid.Column="3"
+                    Text="Revert"
+                    Clicked="OnRevertClicked" />
+        </Grid>
+    </Border>
+
+    <Grid Grid.Row="3"
           x:Name="BodyGrid"
           ColumnDefinitions="320,*"
           ColumnSpacing="12">
@@ -335,6 +367,26 @@
                 <Label x:Name="ClampStateLabel"
                        FontSize="12" />
                 </HorizontalStackLayout>
+                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                    <Border Padding="8" StrokeShape="RoundRectangle 8" BackgroundColor="{AppThemeBinding Light=#F7F7F7, Dark=#242424}">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="Active" FontSize="11" />
+                            <Label x:Name="PrimaryActiveLabel" FontSize="28" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                    </Border>
+                    <Border Grid.Column="1" Padding="8" StrokeShape="RoundRectangle 8" BackgroundColor="{AppThemeBinding Light=#F7F7F7, Dark=#242424}">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="Queued" FontSize="11" />
+                            <Label x:Name="PrimaryQueuedLabel" FontSize="28" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                    </Border>
+                    <Border Grid.Column="2" Padding="8" StrokeShape="RoundRectangle 8" BackgroundColor="{AppThemeBinding Light=#F7F7F7, Dark=#242424}">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="Effective" FontSize="11" />
+                            <Label x:Name="PrimaryEffectiveLabel" FontSize="28" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                    </Border>
+                </Grid>
                 <Label x:Name="LiveNumbersLabel"
                    FontFamily="OpenSansSemibold" />
                 <Label x:Name="PressureLabel"
@@ -702,11 +754,18 @@
                     </HorizontalStackLayout>
                     </HorizontalStackLayout>
                 <Label x:Name="DiagnosticsPathLabel" />
-                <Label Text="Event Tail (Live)" FontAttributes="Bold" />
-                <Editor x:Name="EventsEditor"
-                    HeightRequest="190"
-                    IsReadOnly="True"
-                    FontFamily="OpenSansSemibold" />
+                <Button x:Name="ToggleTechnicalDetailsButton"
+                        Text="Show technical details"
+                        Clicked="OnToggleTechnicalDetailsClicked" />
+                <VerticalStackLayout x:Name="TechnicalDetailsPanel"
+                                     IsVisible="False"
+                                     Spacing="8">
+                    <Label Text="Event Tail (Live)" FontAttributes="Bold" />
+                    <Editor x:Name="EventsEditor"
+                        HeightRequest="190"
+                        IsReadOnly="True"
+                        FontFamily="Courier New" />
+                </VerticalStackLayout>
                 <Label Text="✅ Covered by: H) Diagnostics + audit-lite"
                    FontSize="12" />
             </VerticalStackLayout>
@@ -734,6 +793,19 @@
         </VerticalStackLayout>
         </ScrollView>
     </Grid>
+    <Border x:Name="ApplyToast"
+            Grid.RowSpan="4"
+            IsVisible="False"
+            HorizontalOptions="End"
+            VerticalOptions="End"
+            Padding="10,6"
+            StrokeShape="RoundRectangle 10"
+            Margin="0,0,4,4"
+            BackgroundColor="{AppThemeBinding Light=#EEF7EE, Dark=#213221}">
+        <Label Text="Settings applied"
+               FontSize="12"
+               FontAttributes="Bold" />
+    </Border>
     </Grid>
 
 </ContentPage>

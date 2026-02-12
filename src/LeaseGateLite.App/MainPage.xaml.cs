@@ -305,6 +305,9 @@ public partial class MainPage : ContentPage
 		HeatStateLabel.Text = status.HeatState.ToString();
 		ClampStateLabel.Text = status.AdaptiveClampActive ? "Adaptive clamp active" : "Clamp inactive";
 		LiveNumbersLabel.Text = $"Active: {status.ActiveCalls}   Queue: {status.InteractiveQueueDepth}/{status.BackgroundQueueDepth}   Effective concurrency: {status.EffectiveConcurrency}";
+		PrimaryActiveLabel.Text = status.ActiveCalls.ToString();
+		PrimaryQueuedLabel.Text = (status.InteractiveQueueDepth + status.BackgroundQueueDepth).ToString();
+		PrimaryEffectiveLabel.Text = status.EffectiveConcurrency.ToString();
 		PressureLabel.Text = $"CPU: {status.CpuPercent}%   Available RAM: {status.AvailableRamPercent}%";
 		LastReasonLabel.Text = BuildFriendlyThrottleSentence(status.LastThrottleReason);
 		ThrottleReasonsLabel.Text = status.RecentThrottleReasons.Count == 0
@@ -316,6 +319,14 @@ public partial class MainPage : ContentPage
 		EffectiveConcurrencyPreviewLabel.Text = $"Effective concurrency right now: {status.EffectiveConcurrency}";
 		UpdateDecisionFeed(status);
 		UpdateControlLabels();
+
+		var canApply = _daemonReachable && status.DaemonRunning;
+		HeaderApplyButton.IsEnabled = canApply;
+		HeaderRevertButton.IsEnabled = canApply;
+		if (!canApply)
+		{
+			ConfigStatusLabel.Text = "Daemon not running. Start daemon to apply or revert settings.";
+		}
 
 		StatusDot.Color = status.HeatState switch
 		{
@@ -489,6 +500,8 @@ public partial class MainPage : ContentPage
 	{
 		_hasPendingChanges = pending;
 		PendingPill.IsVisible = pending;
+		StickyPendingPill.IsVisible = pending;
+		StickyPendingStatusLabel.Text = pending ? "Changes are pending. Apply or revert anytime." : "No pending changes.";
 	}
 
 	private void ApplyConfigToControls(LiteConfig config)
@@ -626,6 +639,12 @@ public partial class MainPage : ContentPage
 	{
 		ThrottleReasonsLabel.IsVisible = !ThrottleReasonsLabel.IsVisible;
 		WhyThrottledButton.Text = ThrottleReasonsLabel.IsVisible ? "Hide throttle details" : "Why am I throttled?";
+	}
+
+	private void OnToggleTechnicalDetailsClicked(object? sender, EventArgs e)
+	{
+		TechnicalDetailsPanel.IsVisible = !TechnicalDetailsPanel.IsVisible;
+		ToggleTechnicalDetailsButton.Text = TechnicalDetailsPanel.IsVisible ? "Hide technical details" : "Show technical details";
 	}
 
 	private async void OnNotificationsToggled(object? sender, ToggledEventArgs e)
@@ -792,7 +811,15 @@ public partial class MainPage : ContentPage
 		ApplyConfigToControls(_currentConfig);
 		SetPending(false);
 		ConfigStatusLabel.Text = "Config applied atomically.";
+		await ShowApplyToastAsync();
 		await RefreshStatusAndEventsAsync();
+	}
+
+	private async Task ShowApplyToastAsync()
+	{
+		ApplyToast.IsVisible = true;
+		await Task.Delay(1400);
+		ApplyToast.IsVisible = false;
 	}
 
 	private void OnRevertClicked(object? sender, EventArgs e)
