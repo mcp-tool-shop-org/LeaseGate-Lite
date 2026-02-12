@@ -16,10 +16,31 @@ $zipPath = Join-Path $distRoot "$packageName.zip"
 $checksumPath = "$zipPath.sha256"
 
 Remove-Item $appPublish,$daemonPublish,$trayPublish,$outDir -Recurse -Force -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Path $distRoot | Out-Null
+New-Item -ItemType Directory -Path $distRoot -Force | Out-Null
 
 Write-Host "Publishing app..."
-dotnet publish (Join-Path $root "src/LeaseGateLite.App/LeaseGateLite.App.csproj") -f net10.0-windows10.0.19041.0 -r $Runtime -c Release --self-contained false -o $appPublish
+try {
+    & dotnet publish (Join-Path $root "src/LeaseGateLite.App/LeaseGateLite.App.csproj") -f net10.0-windows10.0.19041.0 -r $Runtime -c Release --self-contained false -o $appPublish
+    if ($LASTEXITCODE -ne 0) { throw "runtime-specific publish failed" }
+}
+catch {
+    Write-Warning "Runtime-specific app publish failed; retrying framework-only publish."
+    & dotnet publish (Join-Path $root "src/LeaseGateLite.App/LeaseGateLite.App.csproj") -f net10.0-windows10.0.19041.0 -c Release --self-contained false -o $appPublish
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Framework-only publish failed; falling back to Release build output."
+        & dotnet build (Join-Path $root "src/LeaseGateLite.App/LeaseGateLite.App.csproj") -f net10.0-windows10.0.19041.0 -c Release -m:1
+        if ($LASTEXITCODE -ne 0) { throw "release build fallback failed" }
+
+        $fallbackPath = Join-Path $root "src/LeaseGateLite.App\bin\Release\net10.0-windows10.0.19041.0\win-x64"
+        if (-not (Test-Path $fallbackPath)) { throw "fallback app output not found at $fallbackPath" }
+        New-Item -ItemType Directory -Path $appPublish -Force | Out-Null
+        Copy-Item "$fallbackPath\*" $appPublish -Recurse -Force
+    }
+}
+
+if (-not (Test-Path $appPublish)) {
+    throw "App publish output was not created at $appPublish"
+}
 
 Write-Host "Publishing daemon..."
 dotnet publish (Join-Path $root "src/LeaseGateLite.Daemon/LeaseGateLite.Daemon.csproj") -f net10.0 -c Release --self-contained false -o $daemonPublish
@@ -28,6 +49,9 @@ Write-Host "Publishing tray companion..."
 dotnet publish (Join-Path $root "src/LeaseGateLite.Tray/LeaseGateLite.Tray.csproj") -f net10.0-windows10.0.19041.0 -r $Runtime -c Release --self-contained false -o $trayPublish
 
 New-Item -ItemType Directory -Path $outDir | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $outDir "app") -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $outDir "daemon") -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $outDir "tray") -Force | Out-Null
 Copy-Item "$appPublish\*" (Join-Path $outDir "app") -Recurse -Force
 Copy-Item "$daemonPublish\*" (Join-Path $outDir "daemon") -Recurse -Force
 Copy-Item "$trayPublish\*" (Join-Path $outDir "tray") -Recurse -Force
