@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LeaseGateLite.App/LeaseGateLite.App.csproj" />
+    <Project Path="src/LeaseGateLite.Contracts/LeaseGateLite.Contracts.csproj" />
+    <Project Path="src/LeaseGateLite.Daemon/LeaseGateLite.Daemon.csproj" />
+  </Folder>
+</Solution>

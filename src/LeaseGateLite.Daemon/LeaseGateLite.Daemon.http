@@ -1,0 +1,6 @@
+@LeaseGateLite.Daemon_HostAddress = http://localhost:5291
+
+GET {{LeaseGateLite.Daemon_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
