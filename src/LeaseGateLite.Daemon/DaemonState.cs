@@ -1108,7 +1108,7 @@ public sealed class DaemonState
         {
             Connected = true,
             DaemonRunning = _running,
-            DaemonVersion = "0.2.0-lite",
+            DaemonVersion = "0.1.1",
             Uptime = _running ? DateTimeOffset.UtcNow - _startedAtUtc : TimeSpan.Zero,
             Endpoint = "http://localhost:5177",
             ConfigFilePath = _configPath,
