@@ -9,3 +9,6 @@ obj/
 *.aab
 *.ipa
 *.dSYM/
+dist/
+release-test/
+*.zip
