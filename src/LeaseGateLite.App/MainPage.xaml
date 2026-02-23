@@ -6,19 +6,19 @@
          Title="Control Panel">
 
     <ContentPage.Resources>
-    <x:Array x:Key="Modes" Type="{x:Type sys:String}">
-        <sys:String>Embedded</sys:String>
-        <sys:String>Daemon</sys:String>
+    <x:Array x:Key="Modes" Type="{x:Type x:String}">
+        <x:String>Embedded</x:String>
+        <x:String>Daemon</x:String>
     </x:Array>
-    <x:Array x:Key="CooldownModes" Type="{x:Type sys:String}">
-        <sys:String>Off</sys:String>
-        <sys:String>Mild</sys:String>
-        <sys:String>Aggressive</sys:String>
+    <x:Array x:Key="CooldownModes" Type="{x:Type x:String}">
+        <x:String>Off</x:String>
+        <x:String>Mild</x:String>
+        <x:String>Aggressive</x:String>
     </x:Array>
-    <x:Array x:Key="OverflowModes" Type="{x:Type sys:String}">
-        <sys:String>TrimOldest</sys:String>
-        <sys:String>Deny</sys:String>
-        <sys:String>QueueOnly</sys:String>
+    <x:Array x:Key="OverflowModes" Type="{x:Type x:String}">
+        <x:String>TrimOldest</x:String>
+        <x:String>Deny</x:String>
+        <x:String>QueueOnly</x:String>
     </x:Array>
     </ContentPage.Resources>
 

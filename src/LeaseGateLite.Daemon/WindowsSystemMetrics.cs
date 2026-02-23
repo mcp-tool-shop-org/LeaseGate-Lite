@@ -6,7 +6,7 @@ namespace LeaseGateLite.Daemon;
 /// Windows-native system metrics via GlobalMemoryStatusEx and performance counters.
 /// Returns accurate CPU and RAM data that matches Task Manager.
 /// </summary>
-public sealed class WindowsSystemMetrics
+public sealed class WindowsSystemMetrics : ISystemMetrics
 {
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
     private class MEMORYSTATUSEX

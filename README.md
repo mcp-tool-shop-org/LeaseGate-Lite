@@ -4,16 +4,23 @@
 
 # LeaseGate-Lite
 
-LeaseGate-Lite is a one-tab MAUI control surface plus a lightweight local daemon.
+[![CI](https://github.com/mcp-tool-shop-org/LeaseGate-Lite/actions/workflows/ci.yml/badge.svg)](https://github.com/mcp-tool-shop-org/LeaseGate-Lite/actions/workflows/ci.yml)
+[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
+[![License: MIT](https://img.shields.io/github/license/mcp-tool-shop-org/LeaseGate-Lite)](LICENSE)
 
-It keeps LeaseGate’s operational feel (explicit control, bounded execution, deterministic reasons, observable status) but trims to home-PC scope.
+A one-tab MAUI control surface and local daemon for throttling AI workloads on Windows — smoother calls, less stutter, fewer thermal spikes.
+
+Keeps LeaseGate's operational feel (explicit control, bounded execution, deterministic reasons, observable status) but trims to home-PC scope.
 
 ## Projects
 
-- `src/LeaseGateLite.Contracts` — shared DTOs and enums
-- `src/LeaseGateLite.Daemon` — minimal local API daemon (`http://localhost:5177`)
-- `src/LeaseGateLite.App` — one-tab MAUI app (`Control`)
-- `LeaseGateLite.slnx` — solution
+| Project | Description |
+|---------|-------------|
+| `src/LeaseGateLite.Contracts` | Shared DTOs and enums (net9.0 + net10.0) |
+| `src/LeaseGateLite.Daemon` | Local API daemon on `localhost:5177` with real Windows system metrics |
+| `src/LeaseGateLite.App` | One-tab MAUI control panel (Windows/Android/iOS/macCatalyst) |
+| `src/LeaseGateLite.Tray` | Windows system tray companion |
+| `tests/LeaseGateLite.Tests` | 178 xUnit tests (config validation, simulation, diagnostics) |
 
 ## Run
 
@@ -23,7 +30,7 @@ It keeps LeaseGate’s operational feel (explicit control, bounded execution, de
 dotnet run --project src/LeaseGateLite.Daemon
 ```
 
-2) Start MAUI app (Windows example):
+2) Start MAUI app (Windows):
 
 ```powershell
 dotnet build src/LeaseGateLite.App -f net10.0-windows10.0.19041.0
@@ -49,86 +56,51 @@ Post-install behavior:
 - Control panel launches and connects automatically.
 - Balanced is the default preset; laptop-like hardware gets a Quiet recommendation in first-run setup (never forced).
 
-## Daemon endpoints (minimal)
+## Daemon endpoints
 
-- `GET /status` — live `StatusSnapshot`
-- `GET /config` — current config
-- `POST /config` — apply config
-- `POST /config/reset` — reset defaults
-- `POST /service/start`
-- `POST /service/stop`
-- `POST /service/restart`
-- `POST /diagnostics/export` — exports JSON bundle and returns path/bytes
-- `GET /events/tail?n=200` — event tail
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/status` | Live `StatusSnapshot` (CPU%, RAM%, queue depth, heat state) |
+| `GET` | `/config` | Current config |
+| `POST` | `/config` | Apply config |
+| `POST` | `/config/reset` | Reset defaults |
+| `POST` | `/service/start` | Start daemon |
+| `POST` | `/service/stop` | Stop daemon |
+| `POST` | `/service/restart` | Restart daemon |
+| `POST` | `/diagnostics/export` | Export JSON diagnostic bundle |
+| `GET` | `/events/tail?n=200` | Event tail |
 
 ## One-tab layout
 
-Single tab/page: `Control`
+Single tab/page: **Control**
 
-- Header strip: status dot, mode picker, endpoint, quick actions (`Start`, `Stop`, `Apply`, `Export Diag`)
-- Left column: auditable checklist (jump to card)
-- Right column: ordered control cards matching checklist sections
+- **Header strip**: status dot, mode picker, endpoint, quick actions (Start, Stop, Apply, Export Diag)
+- **Left column**: auditable checklist (jump to card)
+- **Right column**: ordered control cards matching checklist sections
 
-Each card includes:
+Each card includes: current value, short meaning, controls, effect preview, and a coverage footer.
 
-- current value
-- short meaning
-- controls
-- effect preview
-- footer: `✅ Covered by: ...`
+## Audit checklist
 
-## Audit checklist (phase 1)
-
-A) Service control
-- Connect/reconnect
-- Start/Stop/Restart
-- Version + uptime
-- Open config file location
-- Reset defaults
-
-B) Live status
-- Calm/Warm/Spicy
-- Active calls
-- Queue depth
-- Effective concurrency
-- CPU% / Available RAM%
-- Last throttle reason
-
-C) Core throttling controls
-- Max concurrency
-- Interactive reserve
-- Background cap
-- Cool-down behavior
-
-D) Adaptive throttle tuning
-- Soft threshold
-- Hard threshold
-- Recovery rate
-- Smoothing
-
-E) Request shaping
-- Max output clamp
-- Max prompt/context clamp
-- Overflow behavior
-- Retry policy
-
-F) Rate limiting
-- Requests/min
-- Tokens/min
-- Burst allowance
-
-G) Presets
-- Quiet (Laptop)
-- Balanced
-- Performance (Desktop)
-- Custom preset save/load
-
-H) Diagnostics + audit-lite
-- Export diagnostics
-- Event tail (read-only)
-- Copy status summary
+| Section | Controls |
+|---------|----------|
+| **A) Service** | Connect, Start/Stop/Restart, version + uptime, config location, reset |
+| **B) Live status** | Heat state (Calm/Warm/Spicy), active calls, queue depth, CPU%, RAM% |
+| **C) Core throttling** | Max concurrency, interactive reserve, background cap, cooldown |
+| **D) Adaptive tuning** | Soft/hard thresholds, recovery rate, smoothing |
+| **E) Request shaping** | Max output/prompt clamp, overflow behavior, retry policy |
+| **F) Rate limiting** | Requests/min, tokens/min, burst allowance |
+| **G) Presets** | Quiet (laptop), Balanced, Performance (desktop) |
+| **H) Diagnostics** | Export diagnostics, event tail, copy status summary |
 
 ## Notes
 
-- Lite intentionally excludes heavy governance features (approvals/signing/receipts).
-- The daemon currently simulates pressure and queue dynamics to validate UI behavior end-to-end.
+- Lite intentionally excludes heavy governance features (approvals, signing, receipts).
+- The daemon reads real Windows system metrics (CPU via PerformanceCounter, RAM via GlobalMemoryStatusEx) and simulates queue pressure dynamics.
+- Tests use a `FakeSystemMetrics` provider via dependency injection for deterministic, hardware-independent verification.
+
+---
+
+<p align="center">
+  Built by <a href="https://mcp-tool-shop.github.io/">MCP Tool Shop</a>
+</p>

@@ -10,7 +10,7 @@ public sealed class DaemonState
     private const int MaxQueuedItems = 500;
     private readonly object _lock = new();
     private readonly Random _random = new();
-    private readonly WindowsSystemMetrics _systemMetrics = new();
+    private readonly ISystemMetrics _systemMetrics;
     private readonly List<EventEntry> _events = new();
     private readonly string _runtimeDirectory;
     private readonly string _configPath;
@@ -47,8 +47,9 @@ public sealed class DaemonState
     private bool _backgroundPaused;
     private bool _notificationsEnabled;
 
-    public DaemonState()
+    public DaemonState(ISystemMetrics? systemMetrics = null)
     {
+        _systemMetrics = systemMetrics ?? new WindowsSystemMetrics();
         _runtimeDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LeaseGateLite");
         _configPath = Path.Combine(_runtimeDirectory, "leasegatelite.config.json");
         _diagnosticsDirectory = Path.Combine(_runtimeDirectory, "diagnostics");
