@@ -10,6 +10,7 @@ public sealed class DaemonState
     private const int MaxQueuedItems = 500;
     private readonly object _lock = new();
     private readonly Random _random = new();
+    private readonly ISystemMetrics _systemMetrics;
     private readonly List<EventEntry> _events = new();
     private readonly string _runtimeDirectory;
     private readonly string _configPath;
@@ -46,8 +47,9 @@ public sealed class DaemonState
     private bool _backgroundPaused;
     private bool _notificationsEnabled;
 
-    public DaemonState()
+    public DaemonState(ISystemMetrics? systemMetrics = null)
     {
+        _systemMetrics = systemMetrics ?? new WindowsSystemMetrics();
         _runtimeDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LeaseGateLite");
         _configPath = Path.Combine(_runtimeDirectory, "leasegatelite.config.json");
         _diagnosticsDirectory = Path.Combine(_runtimeDirectory, "diagnostics");
@@ -626,19 +628,9 @@ public sealed class DaemonState
 
         try
         {
-            var delta = _pressureMode == PressureMode.Spiky ? 18 : 8;
-            _cpuPercent = Math.Clamp(_cpuPercent + _random.Next(-delta, delta + 1), 18, 98);
-            _availableRamPercent = Math.Clamp(_availableRamPercent + _random.Next(-delta, delta + 1), 8, 95);
-
-            if (_cpuPercent == 0)
-            {
-                _cpuPercent = _random.Next(28, 65);
-            }
-
-            if (_availableRamPercent == 0)
-            {
-                _availableRamPercent = _random.Next(35, 80);
-            }
+            // Read REAL system metrics from Windows
+            _cpuPercent = _systemMetrics.GetCpuPercent();
+            _availableRamPercent = _systemMetrics.GetAvailableRamPercent();
 
             _degradedMode = false;
             _degradedReason = string.Empty;

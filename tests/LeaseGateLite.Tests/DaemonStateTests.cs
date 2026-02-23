@@ -4,11 +4,23 @@ using Xunit;
 
 namespace LeaseGateLite.Tests;
 
+/// <summary>
+/// Fake metrics provider that returns stable, predictable values for testing.
+/// </summary>
+internal sealed class FakeSystemMetrics : ISystemMetrics
+{
+    public int CpuPercent { get; set; } = 42;
+    public int AvailableRamPercent { get; set; } = 55;
+
+    public int GetCpuPercent() => CpuPercent;
+    public int GetAvailableRamPercent() => AvailableRamPercent;
+}
+
 public sealed class DaemonStateTests
 {
     private static DaemonState CreateState()
     {
-        var state = new DaemonState();
+        var state = new DaemonState(new FakeSystemMetrics());
         state.ResetConfig(apply: true);
         state.SetBackgroundPause(false);
         state.SetNotificationsEnabled(false);

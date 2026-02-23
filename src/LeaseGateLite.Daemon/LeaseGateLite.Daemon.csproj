@@ -4,10 +4,13 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Daemon is Windows-only (PerformanceCounter, GlobalMemoryStatusEx) -->
+    <NoWarn>CA1416</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="10.0.3" />
   </ItemGroup>
 
   <ItemGroup>
