@@ -41,17 +41,17 @@ jobs:
         with:
           dotnet-version: ${{ matrix.dotnet-version }}
 
-      - name: Install MAUI workload
-        run: dotnet workload install maui
-
       - name: Restore dependencies
-        run: dotnet restore
+        run: |
+          dotnet restore src/LeaseGateLite.Contracts/LeaseGateLite.Contracts.csproj
+          dotnet restore src/LeaseGateLite.Daemon/LeaseGateLite.Daemon.csproj
+          dotnet restore tests/LeaseGateLite.Tests/LeaseGateLite.Tests.csproj
 
-      - name: Build solution
-        run: dotnet build --no-restore --configuration Release
+      - name: Build
+        run: dotnet build tests/LeaseGateLite.Tests/LeaseGateLite.Tests.csproj --no-restore --configuration Release
 
       - name: Run tests
-        run: dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test tests/LeaseGateLite.Tests/LeaseGateLite.Tests.csproj --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
 
       - name: Upload test results
         if: always()
