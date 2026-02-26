@@ -12,3 +12,6 @@ obj/
 dist/
 release-test/
 *.zip
+site/.astro/
+site/node_modules/
+.polyglot-cache.json
