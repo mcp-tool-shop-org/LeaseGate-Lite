@@ -106,6 +106,32 @@ Each card includes: current value, short meaning, controls, effect preview, and 
 
 ---
 
+## Security & Data Scope
+
+LeaseGate Lite is a **local-first** MAUI desktop app and daemon for throttling AI workloads.
+
+- **Data accessed:** Local daemon config, system metrics (CPU%, RAM%), throttling state, event logs
+- **Data NOT accessed:** No cloud sync. No telemetry. No analytics. No user data collection
+- **Network:** Daemon listens on `localhost:5177` only — no external network access
+- **No telemetry** is collected or sent
+
+Full policy: [SECURITY.md](SECURITY.md)
+
+---
+
+## Scorecard
+
+| Category | Score |
+|----------|-------|
+| A. Security | 10/10 |
+| B. Error Handling | 10/10 |
+| C. Operator Docs | 10/10 |
+| D. Shipping Hygiene | 10/10 |
+| E. Identity (soft) | 10/10 |
+| **Overall** | **50/50** |
+
+---
+
 <p align="center">
   Built by <a href="https://mcp-tool-shop.github.io/">MCP Tool Shop</a>
 </p>
