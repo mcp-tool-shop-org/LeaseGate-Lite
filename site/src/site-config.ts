@@ -14,7 +14,7 @@ export const config: SiteConfig = {
     headlineAccent: 'keep your PC smooth.',
     description: 'A one-tab MAUI control surface and local daemon that manages concurrency, rate limits, and thermal pressure for local AI — fewer stutters, fewer thermal spikes.',
     primaryCta: { href: '#usage', label: 'Get started' },
-    secondaryCta: { href: '#features', label: 'Learn more' },
+    secondaryCta: { href: 'handbook/', label: 'Read the Handbook' },
     previews: [
       { label: 'Start daemon', code: 'dotnet run --project src/LeaseGateLite.Daemon' },
       { label: 'Status', code: 'GET /status → { cpu: 42%, heat: "Calm", queue: 2 }' },
