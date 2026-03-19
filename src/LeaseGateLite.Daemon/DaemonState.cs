@@ -395,33 +395,21 @@ public sealed partial class DaemonState
     {
         lock (_lock)
         {
-            var timeout = Math.Clamp(timeoutMs, 100, 10_000);
-            var deadline = DateTimeOffset.UtcNow.AddMilliseconds(timeout);
-
-            while (true)
+            var events = _events.Where(e => e.Id > sinceId).Take(300).ToList();
+            if (events.Count > 0)
             {
-                var events = _events.Where(e => e.Id > sinceId).Take(300).ToList();
-                if (events.Count > 0)
+                return new EventStreamResponse
                 {
-                    return new EventStreamResponse
-                    {
-                        LastEventId = events[^1].Id,
-                        Events = events
-                    };
-                }
-
-                var remaining = deadline - DateTimeOffset.UtcNow;
-                if (remaining <= TimeSpan.Zero)
-                {
-                    return new EventStreamResponse
-                    {
-                        LastEventId = sinceId,
-                        Events = new List<EventEntry>()
-                    };
-                }
-
-                Monitor.Wait(_lock, remaining);
+                    LastEventId = events[^1].Id,
+                    Events = events
+                };
             }
+
+            return new EventStreamResponse
+            {
+                LastEventId = sinceId,
+                Events = new List<EventEntry>()
+            };
         }
     }
 
@@ -1118,11 +1106,6 @@ public sealed partial class DaemonState
         if (_eventWriteBuffer.Count >= EventWriteBufferLimit)
         {
             FlushEventBufferCore();
-        }
-
-        if (Monitor.IsEntered(_lock))
-        {
-            Monitor.PulseAll(_lock);
         }
     }
 
