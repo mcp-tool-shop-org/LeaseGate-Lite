@@ -1211,7 +1211,7 @@ public sealed partial class DaemonState
         }
     }
 
-    private static string RedactSensitiveText(string input, bool includePaths = false)
+    internal static string RedactSensitiveText(string input, bool includePaths = false)
     {
         if (string.IsNullOrWhiteSpace(input))
         {

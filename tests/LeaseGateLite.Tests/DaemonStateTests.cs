@@ -770,4 +770,177 @@ public sealed class DaemonStateTests
         Assert.True(response.Events.Count <= 1000);
         Assert.True(response.Events.SequenceEqual(response.Events.OrderBy(eventItem => eventItem.Id)));
     }
+
+    [Fact]
+    public void ConfigPersistence_RoundTrips()
+    {
+        var state = CreateState();
+        var config = state.GetConfig();
+        config.MaxConcurrency = 16;
+        config.RequestsPerMinute = 500;
+        config.TokensPerMinute = 250_000;
+
+        var applyResult = state.ApplyConfig(config);
+
+        Assert.True(applyResult.Success);
+
+        var reloaded = state.GetConfig();
+
+        Assert.Equal(16, reloaded.MaxConcurrency);
+        Assert.Equal(500, reloaded.RequestsPerMinute);
+        Assert.Equal(250_000, reloaded.TokensPerMinute);
+    }
+
+    [Fact]
+    public void ResetConfig_RestoresDefaults()
+    {
+        var state = CreateState();
+        var config = state.GetConfig();
+        config.MaxConcurrency = 16;
+        config.RequestsPerMinute = 500;
+        state.ApplyConfig(config);
+
+        var resetResult = state.ResetConfig(apply: true);
+
+        Assert.True(resetResult.Success);
+
+        var defaults = state.GetDefaults();
+        var current = state.GetConfig();
+
+        Assert.Equal(defaults.MaxConcurrency, current.MaxConcurrency);
+        Assert.Equal(defaults.RequestsPerMinute, current.RequestsPerMinute);
+    }
+
+    [Fact]
+    public void EventStream_ReturnsNewEventsOnly()
+    {
+        var state = CreateState();
+        state.GetStatus();
+
+        var firstResponse = state.GetEventsSince(0, 100);
+        Assert.NotEmpty(firstResponse.Events);
+
+        var sinceId = firstResponse.LastEventId;
+        state.GetStatus();
+
+        var secondResponse = state.GetEventsSince(sinceId, 100);
+
+        foreach (var entry in secondResponse.Events)
+        {
+            Assert.True(entry.Id > sinceId);
+        }
+    }
+
+    [Fact]
+    public void EventStream_ReturnsEmptyWhenNoNewEvents()
+    {
+        var state = CreateState();
+        state.GetStatus();
+
+        var firstResponse = state.GetEventsSince(0, 100);
+        var sinceId = firstResponse.LastEventId;
+
+        var secondResponse = state.GetEventsSince(sinceId, 100);
+
+        Assert.Empty(secondResponse.Events);
+        Assert.Equal(sinceId, secondResponse.LastEventId);
+    }
+
+    [Fact]
+    public void InMemoryEventBuffer_BoundedAt2000()
+    {
+        var state = CreateState();
+
+        for (var i = 0; i < 300; i++)
+        {
+            state.GetStatus();
+        }
+
+        var response = state.GetEvents(5000);
+
+        Assert.True(response.Events.Count <= 2000);
+    }
+
+    [Theory]
+    [InlineData("prompt=hello world", false, "prompt=[REDACTED]")]
+    [InlineData("prompt: secret data", false, "prompt=[REDACTED]")]
+    [InlineData("no sensitive data", false, "no sensitive data")]
+    [InlineData("", false, "")]
+    [InlineData("   ", false, "")]
+    public void RedactSensitiveText_RedactsPrompts(string input, bool includePaths, string expected)
+    {
+        var result = DaemonState.RedactSensitiveText(input, includePaths);
+
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData(@"file at C:\Users\test\config.json", false, "file at [PATH]")]
+    [InlineData(@"file at C:\Users\test\config.json", true, @"file at C:\Users\test\config.json")]
+    [InlineData("file at /home/user/config.json", false, "file at [PATH]")]
+    [InlineData("file at /home/user/config.json", true, "file at /home/user/config.json")]
+    public void RedactSensitiveText_RedactsPaths(string input, bool includePaths, string expected)
+    {
+        var result = DaemonState.RedactSensitiveText(input, includePaths);
+
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void GetStatus_ReportsVersion1()
+    {
+        var state = CreateState();
+
+        var status = state.GetStatus();
+
+        Assert.Equal("1.0.0", status.DaemonVersion);
+    }
+
+    [Fact]
+    public void NotificationsEnabled_PersistsAcrossGetCalls()
+    {
+        var state = CreateState();
+
+        state.SetNotificationsEnabled(true);
+        var settingsEnabled = state.GetNotificationsSettings();
+        Assert.True(settingsEnabled.Enabled);
+
+        state.SetNotificationsEnabled(false);
+        var settingsDisabled = state.GetNotificationsSettings();
+        Assert.False(settingsDisabled.Enabled);
+    }
+
+    [Fact]
+    public void MultipleProfileOverrides_TrackSeparately()
+    {
+        var state = CreateState();
+
+        state.SetAppProfile(new SetAppProfileRequest
+        {
+            ClientAppId = "app-a",
+            ProcessName = "proc-a",
+            PresetName = "Quiet",
+            MaxConcurrency = 4
+        });
+
+        state.SetAppProfile(new SetAppProfileRequest
+        {
+            ClientAppId = "app-b",
+            ProcessName = "proc-b",
+            PresetName = "Performance",
+            MaxConcurrency = 14
+        });
+
+        var profiles = state.GetProfiles();
+
+        Assert.Equal(2, profiles.Overrides.Count);
+
+        var overrideA = profiles.Overrides.Single(o => o.ClientAppId == "app-a");
+        var overrideB = profiles.Overrides.Single(o => o.ClientAppId == "app-b");
+
+        Assert.Equal("Quiet", overrideA.PresetName);
+        Assert.Equal(4, overrideA.MaxConcurrency);
+        Assert.Equal("Performance", overrideB.PresetName);
+        Assert.Equal(14, overrideB.MaxConcurrency);
+    }
 }
