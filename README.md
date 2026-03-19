@@ -25,7 +25,7 @@ Keeps LeaseGate's operational feel (explicit control, bounded execution, determi
 | `src/LeaseGateLite.Daemon` | Local API daemon on `localhost:5177` with real Windows system metrics |
 | `src/LeaseGateLite.App` | One-tab MAUI control panel (Windows/Android/iOS/macCatalyst) |
 | `src/LeaseGateLite.Tray` | Windows system tray companion |
-| `tests/LeaseGateLite.Tests` | 178 xUnit tests (config validation, simulation, diagnostics) |
+| `tests/LeaseGateLite.Tests` | 195 xUnit tests (config validation, simulation, diagnostics, redaction) |
 
 ## Run
 
@@ -47,7 +47,7 @@ dotnet run --project src/LeaseGateLite.App -f net10.0-windows10.0.19041.0
 Create release artifact (portable zip + SHA256 checksum):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/package-v0.1.0.ps1 -Version 1.0.0
+powershell -ExecutionPolicy Bypass -File scripts/package-v0.1.0.ps1 -Version 1.0.1
 ```
 
 Install locally from packaged artifact:

@@ -893,7 +893,7 @@ public sealed class DaemonStateTests
 
         var status = state.GetStatus();
 
-        Assert.Equal("1.0.0", status.DaemonVersion);
+        Assert.Equal("1.0.1", status.DaemonVersion);
     }
 
     [Fact]

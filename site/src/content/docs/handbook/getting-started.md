@@ -11,11 +11,11 @@ LeaseGate-Lite is a multi-project .NET solution:
 
 | Project | Description |
 |---------|-------------|
-| `src/LeaseGateLite.Contracts` | Shared DTOs and enums (net9.0 + net10.0) |
+| `src/LeaseGateLite.Contracts` | Shared DTOs and enums |
 | `src/LeaseGateLite.Daemon` | Local API daemon on `localhost:5177` with real Windows system metrics |
 | `src/LeaseGateLite.App` | One-tab MAUI control panel (Windows/Android/iOS/macCatalyst) |
 | `src/LeaseGateLite.Tray` | Windows system tray companion |
-| `tests/LeaseGateLite.Tests` | 178 xUnit tests (config validation, simulation, diagnostics) |
+| `tests/LeaseGateLite.Tests` | 195 xUnit tests (config validation, simulation, diagnostics, redaction) |
 
 ## Run the daemon
 
@@ -39,7 +39,7 @@ The MAUI app connects to the daemon automatically and displays live status.
 Create a release artifact (portable zip + SHA256 checksum):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/package-v0.1.0.ps1
+powershell -ExecutionPolicy Bypass -File scripts/package-v0.1.0.ps1 -Version 1.0.1
 ```
 
 Install locally from the packaged artifact:
@@ -59,4 +59,4 @@ After installation:
 dotnet test tests/LeaseGateLite.Tests
 ```
 
-All 178 tests use a `FakeSystemMetrics` provider via dependency injection for deterministic, hardware-independent verification.
+All 195 tests use a `FakeSystemMetrics` provider via dependency injection for deterministic, hardware-independent verification.

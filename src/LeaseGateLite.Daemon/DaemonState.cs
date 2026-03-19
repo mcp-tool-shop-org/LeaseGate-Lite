@@ -1166,7 +1166,7 @@ public sealed partial class DaemonState
         {
             Connected = true,
             DaemonRunning = _running,
-            DaemonVersion = "1.0.0",
+            DaemonVersion = "1.0.1",
             Uptime = _running ? DateTimeOffset.UtcNow - _startedAtUtc : TimeSpan.Zero,
             Endpoint = "http://localhost:5177",
             ConfigFilePath = _configPath,
