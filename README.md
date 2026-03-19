@@ -21,7 +21,7 @@ Keeps LeaseGate's operational feel (explicit control, bounded execution, determi
 
 | Project | Description |
 |---------|-------------|
-| `src/LeaseGateLite.Contracts` | Shared DTOs and enums (net9.0 + net10.0) |
+| `src/LeaseGateLite.Contracts` | Shared DTOs and enums |
 | `src/LeaseGateLite.Daemon` | Local API daemon on `localhost:5177` with real Windows system metrics |
 | `src/LeaseGateLite.App` | One-tab MAUI control panel (Windows/Android/iOS/macCatalyst) |
 | `src/LeaseGateLite.Tray` | Windows system tray companion |
@@ -47,7 +47,7 @@ dotnet run --project src/LeaseGateLite.App -f net10.0-windows10.0.19041.0
 Create release artifact (portable zip + SHA256 checksum):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/package-v0.1.0.ps1
+powershell -ExecutionPolicy Bypass -File scripts/package-v0.1.0.ps1 -Version 1.0.0
 ```
 
 Install locally from packaged artifact:
@@ -67,13 +67,29 @@ Post-install behavior:
 |--------|------|-------------|
 | `GET` | `/status` | Live `StatusSnapshot` (CPU%, RAM%, queue depth, heat state) |
 | `GET` | `/config` | Current config |
+| `GET` | `/config/defaults` | Default config values |
 | `POST` | `/config` | Apply config |
 | `POST` | `/config/reset` | Reset defaults |
 | `POST` | `/service/start` | Start daemon |
 | `POST` | `/service/stop` | Stop daemon |
 | `POST` | `/service/restart` | Restart daemon |
+| `POST` | `/service/pause-background` | Pause/resume background work |
+| `POST` | `/service/exit` | Graceful daemon shutdown |
+| `GET` | `/autostart/status` | Autostart toggle status |
+| `POST` | `/autostart` | Enable/disable autostart |
+| `GET` | `/notifications` | Notification settings |
+| `POST` | `/notifications` | Enable/disable notifications |
+| `GET` | `/presets` | List all presets |
+| `POST` | `/preset/preview` | Preview preset diff against current config |
+| `POST` | `/preset/apply` | Apply a preset (Quiet/Balanced/Performance) |
+| `GET` | `/profiles` | Per-app profile overrides |
+| `POST` | `/profiles/apply` | Set per-app profile override |
 | `POST` | `/diagnostics/export` | Export JSON diagnostic bundle |
+| `GET` | `/diagnostics/preview` | Preview diagnostic export contents |
 | `GET` | `/events/tail?n=200` | Event tail |
+| `GET` | `/events/stream` | Poll for new events since a given ID |
+| `POST` | `/simulate/pressure` | Set pressure mode (requires `--enable-simulation`) |
+| `POST` | `/simulate/flood` | Flood simulation (requires `--enable-simulation`) |
 
 ## One-tab layout
 
@@ -113,6 +129,8 @@ LeaseGate Lite is a **local-first** MAUI desktop app and daemon for throttling A
 - **Data accessed:** Local daemon config, system metrics (CPU%, RAM%), throttling state, event logs
 - **Data NOT accessed:** No cloud sync. No telemetry. No analytics. No user data collection
 - **Network:** Daemon listens on `localhost:5177` only — no external network access
+- **Auth:** Optional `--require-auth` flag generates a token file and validates `X-Auth-Token` on all requests
+- **Simulation:** `/simulate/*` endpoints disabled by default; enable with `--enable-simulation`
 - **No telemetry** is collected or sent
 
 Full policy: [SECURITY.md](SECURITY.md)

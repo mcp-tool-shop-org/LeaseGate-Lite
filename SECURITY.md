@@ -38,6 +38,8 @@ LeaseGate Lite is a **local-first** MAUI desktop app and daemon for throttling A
 
 ### Known Security Considerations
 
-- The daemon listens on `localhost:5177` with **no authentication**. Any local process can call the API. This is by design for home-PC scope.
+- The daemon listens on `localhost:5177` with **no authentication by default**. Any local process can call the API. This is by design for home-PC scope.
+- Optional `--require-auth` flag enables token-based authentication. The token is generated at first run and stored in `%LOCALAPPDATA%\LeaseGateLite\daemon.token`.
+- Simulation endpoints (`/simulate/pressure`, `/simulate/flood`) are **disabled by default**. Enable with `--enable-simulation` or by running in Development mode.
 - Diagnostics export may contain file paths and configuration details. Review before sharing.
-- Simulation endpoints are always enabled. Do not expose the daemon to a network.
+- Event log files are rotated at 5 MB to prevent unbounded disk growth.
