@@ -13,6 +13,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly ToolStripMenuItem _pauseBackgroundItem;
     private readonly ToolStripMenuItem _notificationsItem;
     private DateTimeOffset _lastNotificationUtc = DateTimeOffset.MinValue;
+    private DateTimeOffset _lastNotificationsPollUtc = DateTimeOffset.MinValue;
 
     public TrayApplicationContext()
     {
@@ -95,10 +96,15 @@ internal sealed class TrayApplicationContext : ApplicationContext
             _notifyIcon.Text = $"LeaseGate Lite: {status.HeatState} | Eff {status.EffectiveConcurrency} | Q {queueDepth}";
             _pauseBackgroundItem.Checked = status.BackgroundPaused;
 
-            var notificationSettings = await _httpClient.GetFromJsonAsync<NotificationsSettingsResponse>("/notifications");
-            _notificationsItem.Checked = notificationSettings?.Enabled == true;
+            var now = DateTimeOffset.UtcNow;
+            if (now - _lastNotificationsPollUtc >= TimeSpan.FromSeconds(30))
+            {
+                _lastNotificationsPollUtc = now;
+                var notificationSettings = await _httpClient.GetFromJsonAsync<NotificationsSettingsResponse>("/notifications");
+                _notificationsItem.Checked = notificationSettings?.Enabled == true;
+            }
 
-            MaybeNotify(status, queueDepth, notificationSettings?.Enabled == true);
+            MaybeNotify(status, queueDepth, _notificationsItem.Checked);
         }
         catch
         {
@@ -167,15 +173,26 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private static void OpenControlPanel()
     {
         var baseDir = AppContext.BaseDirectory;
-        var candidate = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "LeaseGateLite.App", "bin", "Debug", "net10.0-windows10.0.19041.0", "win-x64", "LeaseGateLite.App.exe"));
-        if (File.Exists(candidate))
+        var candidates = new[]
         {
-            Process.Start(new ProcessStartInfo
+            // Packaged layout: tray/ and app/ are siblings
+            Path.GetFullPath(Path.Combine(baseDir, "..", "app", "LeaseGateLite.App.exe")),
+            // Dev layout: navigate from tray bin to app bin
+            Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "LeaseGateLite.App", "bin", "Debug", "net10.0-windows10.0.19041.0", "win-x64", "LeaseGateLite.App.exe")),
+            Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "LeaseGateLite.App", "bin", "Release", "net10.0-windows10.0.19041.0", "win-x64", "LeaseGateLite.App.exe")),
+        };
+
+        foreach (var candidate in candidates)
+        {
+            if (File.Exists(candidate))
             {
-                FileName = candidate,
-                UseShellExecute = true
-            });
-            return;
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = candidate,
+                    UseShellExecute = true
+                });
+                return;
+            }
         }
 
         MessageBox.Show("Control panel executable not found. Launch LeaseGateLite.App manually.", "LeaseGate Lite", MessageBoxButtons.OK, MessageBoxIcon.Information);
