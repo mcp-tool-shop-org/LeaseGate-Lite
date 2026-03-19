@@ -17,6 +17,9 @@ public sealed partial class DaemonState
 
     [GeneratedRegex(@"/[^\s]+")]
     private static partial Regex UnixPathRegex();
+    private const long MaxEventLogBytes = 5 * 1024 * 1024; // 5 MB
+    private const int EventWriteBufferLimit = 50;
+
     private readonly object _lock = new();
     private readonly Random _random = new();
     private readonly ISystemMetrics _systemMetrics;
@@ -25,7 +28,10 @@ public sealed partial class DaemonState
     private readonly string _configPath;
     private readonly string _diagnosticsDirectory;
     private readonly string _eventLogPath;
+    private readonly string _eventLogRotatedPath;
     private readonly string _notificationsPath;
+    private readonly List<string> _eventWriteBuffer = new();
+    private readonly Timer _eventFlushTimer;
     private readonly Dictionary<string, SeenClient> _recentClients = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, AppProfileOverride> _profileOverrides = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, (int Interactive, int Background)> _appDemands = new(StringComparer.OrdinalIgnoreCase);
@@ -63,7 +69,9 @@ public sealed partial class DaemonState
         _configPath = Path.Combine(_runtimeDirectory, "leasegatelite.config.json");
         _diagnosticsDirectory = Path.Combine(_runtimeDirectory, "diagnostics");
         _eventLogPath = Path.Combine(_runtimeDirectory, "leasegatelite-events.jsonl");
+        _eventLogRotatedPath = Path.Combine(_runtimeDirectory, "leasegatelite-events.1.jsonl");
         _notificationsPath = Path.Combine(_runtimeDirectory, "leasegatelite.notifications.json");
+        _eventFlushTimer = new Timer(_ => FlushEventBuffer(), null, TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500));
         Directory.CreateDirectory(_runtimeDirectory);
         Directory.CreateDirectory(_diagnosticsDirectory);
 
@@ -1105,10 +1113,67 @@ public sealed partial class DaemonState
             _events.RemoveRange(0, _events.Count - 2000);
         }
 
-        File.AppendAllText(_eventLogPath, JsonSerializer.Serialize(entry) + Environment.NewLine);
+        _eventWriteBuffer.Add(JsonSerializer.Serialize(entry));
+
+        if (_eventWriteBuffer.Count >= EventWriteBufferLimit)
+        {
+            FlushEventBufferCore();
+        }
+
         if (Monitor.IsEntered(_lock))
         {
             Monitor.PulseAll(_lock);
+        }
+    }
+
+    private void FlushEventBuffer()
+    {
+        lock (_lock)
+        {
+            FlushEventBufferCore();
+        }
+    }
+
+    private void FlushEventBufferCore()
+    {
+        if (_eventWriteBuffer.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var payload = string.Join(Environment.NewLine, _eventWriteBuffer) + Environment.NewLine;
+            _eventWriteBuffer.Clear();
+            File.AppendAllText(_eventLogPath, payload);
+            RotateEventLogIfNeeded();
+        }
+        catch
+        {
+            // Swallow I/O errors — event log is best-effort
+        }
+    }
+
+    private void RotateEventLogIfNeeded()
+    {
+        try
+        {
+            var info = new FileInfo(_eventLogPath);
+            if (!info.Exists || info.Length < MaxEventLogBytes)
+            {
+                return;
+            }
+
+            if (File.Exists(_eventLogRotatedPath))
+            {
+                File.Delete(_eventLogRotatedPath);
+            }
+
+            File.Move(_eventLogPath, _eventLogRotatedPath);
+        }
+        catch
+        {
+            // Rotation is best-effort
         }
     }
 
