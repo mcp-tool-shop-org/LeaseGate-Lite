@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using LeaseGateLite.Contracts;
 using LeaseGateLite.Daemon;
 using Microsoft.AspNetCore.Http.Timeouts;
@@ -6,6 +7,8 @@ using System.Text.Json.Serialization;
 const string MutexName = "Local\\LeaseGateLite.Daemon.Singleton";
 
 var cliArgs = args.Select(a => a.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+var enableSimulation = cliArgs.Contains("--enable-simulation");
+var requireAuth = cliArgs.Contains("--require-auth");
 
 if (cliArgs.Contains("--install-autostart"))
 {
@@ -35,9 +38,14 @@ if (cliArgs.Contains("--status"))
     return;
 }
 
-if (cliArgs.Count > 0 && !cliArgs.Contains("--run"))
+var knownFlags = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 {
-    Console.WriteLine("Unknown mode. Supported: --run, --install-autostart, --uninstall-autostart, --status");
+    "--run", "--install-autostart", "--uninstall-autostart", "--status",
+    "--enable-simulation", "--require-auth"
+};
+if (cliArgs.Count > 0 && cliArgs.Any(a => !knownFlags.Contains(a)))
+{
+    Console.WriteLine("Unknown flag. Supported: --run, --install-autostart, --uninstall-autostart, --status, --enable-simulation, --require-auth");
     return;
 }
 
@@ -78,8 +86,40 @@ if (app.Environment.IsDevelopment())
 
 app.UseRequestTimeouts();
 
+// Optional auth token — when --require-auth is set, generate/load a token file
+string? authToken = null;
+if (requireAuth)
+{
+    var tokenPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LeaseGateLite", "daemon.token");
+    Directory.CreateDirectory(Path.GetDirectoryName(tokenPath)!);
+    if (File.Exists(tokenPath))
+    {
+        authToken = File.ReadAllText(tokenPath).Trim();
+    }
+
+    if (string.IsNullOrWhiteSpace(authToken))
+    {
+        authToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+        File.WriteAllText(tokenPath, authToken);
+    }
+
+    Console.WriteLine($"auth token file: {tokenPath}");
+}
+
 app.Use(async (context, next) =>
 {
+    // Auth check — if --require-auth is active, validate X-Auth-Token header
+    if (authToken is not null)
+    {
+        var provided = context.Request.Headers["X-Auth-Token"].ToString();
+        if (!string.Equals(provided, authToken, StringComparison.Ordinal))
+        {
+            context.Response.StatusCode = 401;
+            await context.Response.WriteAsJsonAsync(new { error = "missing or invalid X-Auth-Token header" });
+            return;
+        }
+    }
+
     var daemonState = context.RequestServices.GetRequiredService<DaemonState>();
     var clientAppId = context.Request.Headers["X-Client-AppId"].ToString();
     var processName = context.Request.Headers["X-Process-Name"].ToString();
@@ -159,10 +199,13 @@ app.MapPost("/profiles/apply", (SetAppProfileRequest request, DaemonState daemon
     return result.Success ? Results.Ok(result) : Results.BadRequest(result);
 });
 
-app.MapPost("/simulate/pressure", (SimulatePressureRequest request, DaemonState daemon) =>
-    Results.Ok(daemon.SetPressureMode(request.Mode)));
+if (enableSimulation || app.Environment.IsDevelopment())
+{
+    app.MapPost("/simulate/pressure", (SimulatePressureRequest request, DaemonState daemon) =>
+        Results.Ok(daemon.SetPressureMode(request.Mode)));
 
-app.MapPost("/simulate/flood", (SimulateFloodRequest request, DaemonState daemon) =>
-    Results.Ok(daemon.SimulateFlood(request)));
+    app.MapPost("/simulate/flood", (SimulateFloodRequest request, DaemonState daemon) =>
+        Results.Ok(daemon.SimulateFlood(request)));
+}
 
 app.Run();
