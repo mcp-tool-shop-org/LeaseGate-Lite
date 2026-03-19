@@ -5,9 +5,18 @@ using LeaseGateLite.Contracts;
 
 namespace LeaseGateLite.Daemon;
 
-public sealed class DaemonState
+public sealed partial class DaemonState
 {
     private const int MaxQueuedItems = 500;
+
+    [GeneratedRegex(@"prompt\s*[:=].*", RegexOptions.IgnoreCase)]
+    private static partial Regex PromptRedactionRegex();
+
+    [GeneratedRegex(@"[A-Za-z]:\\[^""\r\n]*")]
+    private static partial Regex WindowsPathRegex();
+
+    [GeneratedRegex(@"/[^\s]+")]
+    private static partial Regex UnixPathRegex();
     private readonly object _lock = new();
     private readonly Random _random = new();
     private readonly ISystemMetrics _systemMetrics;
@@ -1109,7 +1118,7 @@ public sealed class DaemonState
         {
             Connected = true,
             DaemonRunning = _running,
-            DaemonVersion = "0.2.0-lite",
+            DaemonVersion = "1.0.0",
             Uptime = _running ? DateTimeOffset.UtcNow - _startedAtUtc : TimeSpan.Zero,
             Endpoint = "http://localhost:5177",
             ConfigFilePath = _configPath,
@@ -1161,12 +1170,12 @@ public sealed class DaemonState
             return string.Empty;
         }
 
-        var redacted = Regex.Replace(input, "prompt\\s*[:=].*", "prompt=[REDACTED]", RegexOptions.IgnoreCase);
+        var redacted = PromptRedactionRegex().Replace(input, "prompt=[REDACTED]");
 
         if (!includePaths)
         {
-            redacted = Regex.Replace(redacted, @"[A-Za-z]:\\[^\""\r\n]*", "[PATH]", RegexOptions.Compiled);
-            redacted = Regex.Replace(redacted, @"/[^\s]+", "[PATH]", RegexOptions.Compiled);
+            redacted = WindowsPathRegex().Replace(redacted, "[PATH]");
+            redacted = UnixPathRegex().Replace(redacted, "[PATH]");
         }
 
         return redacted;

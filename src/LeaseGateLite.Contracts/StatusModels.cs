@@ -4,7 +4,7 @@ public sealed class StatusSnapshot
 {
     public bool Connected { get; set; }
     public bool DaemonRunning { get; set; }
-    public string DaemonVersion { get; set; } = "0.2.0-lite";
+    public string DaemonVersion { get; set; } = "1.0.0";
     public TimeSpan Uptime { get; set; }
     public string Endpoint { get; set; } = "http://localhost:5177";
     public string ConfigFilePath { get; set; } = string.Empty;
