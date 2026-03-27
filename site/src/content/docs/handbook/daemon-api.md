@@ -57,11 +57,36 @@ The daemon reads real Windows system metrics using `PerformanceCounter` (CPU) an
 3. `POST /config` — apply changes (takes effect immediately)
 4. `POST /config/reset` — restore factory defaults at any time
 
+## Client registration headers
+
+Every request can include optional headers for client tracking:
+
+| Header | Purpose |
+|--------|---------|
+| `X-Client-AppId` | Application identifier (used for per-app profiles) |
+| `X-Process-Name` | Process name of the calling application |
+| `X-Client-Signature` | Client signature for identification |
+
+The daemon tracks recently seen clients and uses the `ClientAppId` to apply per-app profile overrides. See [Configuration](/LeaseGate-Lite/handbook/configuration/) for per-app profile details.
+
+## CLI flags
+
+The daemon accepts several flags:
+
+| Flag | Description |
+|------|-------------|
+| `--require-auth` | Enable token-based authentication via `X-Auth-Token` header |
+| `--enable-simulation` | Enable `/simulate/*` endpoints |
+| `--install-autostart` | Register the daemon to start on login |
+| `--uninstall-autostart` | Remove the autostart registration |
+| `--status` | Print daemon status and exit |
+| `--run` | Standard run mode |
+
 ## Security
 
 The daemon listens on `localhost:5177` with no authentication by default. For environments where local process isolation matters, start the daemon with `--require-auth` to enable token-based authentication. The token is auto-generated at first run and stored in `%LOCALAPPDATA%\LeaseGateLite\daemon.token`. Clients must pass it via the `X-Auth-Token` header.
 
-Simulation endpoints (`/simulate/pressure` and `/simulate/flood`) are disabled by default. Enable them with `--enable-simulation` or by running in Development mode.
+Simulation endpoints (`/simulate/pressure` and `/simulate/flood`) are disabled by default. Enable them with `--enable-simulation` or by running in Development mode. Only one daemon instance can run at a time -- the daemon uses a named mutex (`Local\LeaseGateLite.Daemon.Singleton`) to enforce single-instance.
 
 ## Diagnostics
 

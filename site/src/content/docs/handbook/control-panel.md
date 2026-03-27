@@ -42,6 +42,20 @@ Three built-in profiles to match your hardware:
 
 Laptop-like hardware gets a Quiet recommendation during first-run setup, but it is never forced — you always choose.
 
+## Per-app profiles
+
+The control panel lets you set per-application overrides. When the daemon sees requests with an `X-Client-AppId` header, it tracks the client and lets you assign a preset or custom limits (concurrency, background cap, token clamps, rate limits) for that specific app. This is useful when you run multiple AI tools simultaneously and want to prioritize one over others.
+
+## Heat states
+
+The status dot in the header strip reflects the current thermal state:
+
+| State | Meaning |
+|-------|---------|
+| **Calm** | System pressure is low, running normally |
+| **Warm** | Pressure has crossed the soft threshold, concurrency is being reduced |
+| **Spicy** | Pressure has crossed the hard threshold, aggressive throttling is active |
+
 ## Design philosophy
 
 LeaseGate-Lite intentionally excludes heavy governance features (approvals, signing, receipts). The goal is smoother AI calls with less stutter and fewer thermal spikes — nothing more.

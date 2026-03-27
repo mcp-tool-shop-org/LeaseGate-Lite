@@ -5,6 +5,12 @@ sidebar:
   order: 1
 ---
 
+## Prerequisites
+
+- **.NET 10 SDK** — [Download from Microsoft](https://dotnet.microsoft.com/download)
+- **Windows 10/11** — The daemon reads Windows-specific system metrics (CPU via `PerformanceCounter`, RAM via `GlobalMemoryStatusEx`)
+- **Git** (optional) — To clone the repository
+
 ## Projects
 
 LeaseGate-Lite is a multi-project .NET solution:

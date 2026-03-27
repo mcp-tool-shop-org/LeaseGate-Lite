@@ -5,43 +5,64 @@ sidebar:
   order: 4
 ---
 
+All configuration is stored locally at `%LOCALAPPDATA%\LeaseGateLite\leasegatelite.config.json`. No cloud sync, no telemetry. Changes take effect immediately via `POST /config` with no daemon restart required.
+
 ## Core throttling
 
 These settings control how many AI calls run concurrently and how the daemon manages load:
 
-- **Max concurrency** — upper limit on simultaneous AI calls
-- **Interactive reserve** — slots reserved for user-initiated requests
-- **Background cap** — maximum background/batch calls allowed
-- **Cooldown** — delay between finishing one call and starting the next
+| Setting | Default | Description |
+|---------|---------|-------------|
+| **MaxConcurrency** | 8 | Upper limit on simultaneous AI calls |
+| **InteractiveReserve** | 2 | Slots reserved for user-initiated requests |
+| **BackgroundCap** | 6 | Maximum background/batch calls allowed |
+| **CooldownBehavior** | `Mild` | Delay between calls: `Off`, `Mild`, or `Aggressive` |
 
 ## Adaptive tuning
 
 The daemon automatically adjusts behavior based on system pressure:
 
-- **Soft threshold** — when CPU or RAM exceeds this percentage, the daemon begins reducing concurrency gradually
-- **Hard threshold** — when CPU or RAM exceeds this percentage, the daemon aggressively throttles to prevent thermal events
-- **Recovery rate** — how quickly concurrency ramps back up after pressure drops
-- **Smoothing** — dampening factor to prevent oscillation between throttled and unthrottled states
+| Setting | Default | Description |
+|---------|---------|-------------|
+| **SoftThresholdPercent** | 70 | CPU/RAM percentage where concurrency begins reducing gradually |
+| **HardThresholdPercent** | 90 | CPU/RAM percentage where aggressive throttling kicks in |
+| **RecoveryRatePercent** | 20 | How quickly concurrency ramps back up after pressure drops |
+| **SmoothingPercent** | 40 | Dampening factor to prevent oscillation between states |
+
+When the smoothed pressure crosses the soft threshold, the daemon reduces effective concurrency proportionally. If pressure hits the hard threshold, the daemon clamps to minimum concurrency and enters `Spicy` heat state.
 
 ## Request shaping
 
 Control how individual requests are constrained:
 
-- **Max output** — maximum token output per request
-- **Prompt clamp** — maximum prompt size allowed
-- **Overflow behavior** — what happens when limits are exceeded (queue, reject, or truncate)
-- **Retry policy** — automatic retry behavior for transient failures
+| Setting | Default | Description |
+|---------|---------|-------------|
+| **MaxOutputTokensClamp** | 1024 | Maximum token output per request |
+| **MaxPromptTokensClamp** | 4096 | Maximum prompt size allowed |
+| **OverflowBehavior** | `TrimOldest` | What happens when the queue is full: `TrimOldest`, `Deny`, or `QueueOnly` |
+| **MaxRetries** | 2 | Automatic retries for transient failures |
+| **RetryBackoffMs** | 500 | Milliseconds between retries |
 
 ## Rate limiting
 
 Global rate controls applied across all AI calls:
 
-- **Requests/min** — maximum number of requests per minute
-- **Tokens/min** — maximum total tokens per minute
-- **Burst allowance** — short-term burst capacity above the rate limit
+| Setting | Default | Description |
+|---------|---------|-------------|
+| **RequestsPerMinute** | 120 | Maximum number of requests per minute |
+| **TokensPerMinute** | 120,000 | Maximum total tokens per minute |
+| **BurstAllowance** | 12 | Short-term burst capacity above the rate limit |
+
+## Per-app profiles
+
+The daemon tracks connected clients via `X-Client-AppId`, `X-Process-Name`, and `X-Client-Signature` headers. You can set per-app overrides that take precedence over global settings:
+
+- `MaxConcurrency`, `BackgroundCap`, `MaxOutputTokensClamp`, `MaxPromptTokensClamp`, `RequestsPerMinute`, `TokensPerMinute`
+
+Use `GET /profiles` to see recently connected apps, then `POST /profiles/apply` to set an override for a specific client.
 
 ## Applying changes
 
-Configuration changes take effect immediately via `POST /config`. No daemon restart required. Use `POST /config/reset` to restore factory defaults at any time.
+Configuration changes take effect immediately via `POST /config`. No daemon restart required. Use `POST /config/reset` (with `apply=true`) to restore factory defaults at any time.
 
-All settings are persisted locally. No cloud sync, no telemetry.
+Use `POST /preset/preview` before applying a preset to see exactly what will change.

@@ -15,5 +15,6 @@ LeaseGate-Lite is a one-tab MAUI control surface and local daemon for throttling
 - **[Daemon API](/LeaseGate-Lite/handbook/daemon-api/)** — All REST endpoints on localhost:5177
 - **[Control Panel](/LeaseGate-Lite/handbook/control-panel/)** — One-tab layout, audit checklist, and presets
 - **[Configuration](/LeaseGate-Lite/handbook/configuration/)** — Throttling, rate limiting, and adaptive tuning
+- **[Beginners Guide](/LeaseGate-Lite/handbook/beginners/)** — First-time setup walkthrough for new users
 
 [Back to landing page](/LeaseGate-Lite/)
