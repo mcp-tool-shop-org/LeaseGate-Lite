@@ -875,8 +875,8 @@ public sealed class DaemonStateTests
     }
 
     [Theory]
-    [InlineData(@"file at C:\Users\test\config.json", false, "file at [PATH]")]
-    [InlineData(@"file at C:\Users\test\config.json", true, @"file at C:\Users\test\config.json")]
+    [InlineData(@"file at C:\Users\Public\config.json", false, "file at [PATH]")]
+    [InlineData(@"file at C:\Users\Public\config.json", true, @"file at C:\Users\Public\config.json")]
     [InlineData("file at /home/user/config.json", false, "file at [PATH]")]
     [InlineData("file at /home/user/config.json", true, "file at /home/user/config.json")]
     public void RedactSensitiveText_RedactsPaths(string input, bool includePaths, string expected)
