@@ -29,6 +29,61 @@ public partial class MainPage : ContentPage
 	private bool _firstRunKeepUiResponsive = true;
 	private bool _firstRunStartOnLogin;
 
+	// Centralized daemon call wrapper for error handling
+	private async Task SafeDaemonCallAsync(string actionName, Func<Task> action)
+	{
+		try
+		{
+			await action();
+		}
+		catch (HttpRequestException)
+		{
+			_daemonReachable = false;
+			ConfigStatusLabel.Text = $"Cannot {actionName} - daemon not running";
+		}
+		catch (TaskCanceledException)
+		{
+			ConfigStatusLabel.Text = $"Timeout while trying to {actionName}";
+		}
+		catch (System.Text.Json.JsonException ex)
+		{
+			ConfigStatusLabel.Text = $"JSON error: {ex.Message}";
+		}
+		catch (Exception ex)
+		{
+			ConfigStatusLabel.Text = $"{actionName} failed: {ex.Message}";
+		}
+	}
+
+	private async Task<T?> SafeDaemonCallAsync<T>(string actionName, Func<Task<T>> action, T? fallback = default)
+	{
+		try
+		{
+			return await action();
+		}
+		catch (HttpRequestException)
+		{
+			_daemonReachable = false;
+			ConfigStatusLabel.Text = $"Cannot {actionName} - daemon not running";
+			return fallback;
+		}
+		catch (TaskCanceledException)
+		{
+			ConfigStatusLabel.Text = $"Timeout while trying to {actionName}";
+			return fallback;
+		}
+		catch (System.Text.Json.JsonException ex)
+		{
+			ConfigStatusLabel.Text = $"JSON error: {ex.Message}";
+			return fallback;
+		}
+		catch (Exception ex)
+		{
+			ConfigStatusLabel.Text = $"{actionName} failed: {ex.Message}";
+			return fallback;
+		}
+	}
+
 	public MainPage(DaemonApiClient daemonApiClient)
 	{
 		InitializeComponent();
@@ -53,18 +108,28 @@ public partial class MainPage : ContentPage
 
 	private async void OnLoaded(object? sender, EventArgs e)
 	{
-		ModePicker.SelectedIndex = 1;
-		OnSizeChanged(sender, e);
-		await RefreshAllAsync();
-		InitializeFirstRunState();
-
-		Dispatcher.StartTimer(TimeSpan.FromSeconds(2), () =>
+		try
 		{
-			_ = RefreshStatusAndEventsAsync();
-			return true;
-		});
+			ModePicker.SelectedIndex = 1;
+			OnSizeChanged(sender, e);
+			await RefreshAllAsync();
+			InitializeFirstRunState();
 
-		_ = RunEventStreamLoopAsync();
+			Dispatcher.StartTimer(TimeSpan.FromSeconds(2), () =>
+			{
+				_ = RefreshStatusAndEventsAsync();
+				return true;
+			});
+
+			_ = RunEventStreamLoopAsync();
+		}
+		catch (Exception ex)
+		{
+			_daemonReachable = false;
+			ConnectionStateLabel.Text = "Failed to connect to daemon";
+			DiagnosticsPathLabel.Text = $"Daemon connection error: {ex.Message}";
+			StatusDot.Color = Color.FromArgb("#B0B0B0");
+		}
 	}
 
 	private void OnSizeChanged(object? sender, EventArgs e)
@@ -84,11 +149,21 @@ public partial class MainPage : ContentPage
 
 	private async Task RefreshAllAsync()
 	{
-		await RefreshStatusAndEventsAsync();
-		await RefreshConfigAsync();
-		await RefreshAutostartAsync();
-		await RefreshNotificationsAsync();
-		await RefreshProfilesAsync();
+		try
+		{
+			await RefreshStatusAndEventsAsync();
+			await RefreshConfigAsync();
+			await RefreshAutostartAsync();
+			await RefreshNotificationsAsync();
+			await RefreshProfilesAsync();
+		}
+		catch (HttpRequestException)
+		{
+			_daemonReachable = false;
+			ConnectionStateLabel.Text = "Daemon not running";
+			DiagnosticsPathLabel.Text = "Start the daemon to enable settings and monitoring.";
+			StatusDot.Color = Color.FromArgb("#B0B0B0");
+		}
 	}
 
 	private async Task RefreshNotificationsAsync()
@@ -292,6 +367,10 @@ public partial class MainPage : ContentPage
 			SetPending(false);
 			ConfigStatusLabel.Text = "Config synced with daemon.";
 		}
+		catch (HttpRequestException)
+		{
+			ConfigStatusLabel.Text = "Cannot load config: daemon not running";
+		}
 		finally
 		{
 			_ignoreConfigEvents = false;
@@ -348,9 +427,9 @@ public partial class MainPage : ContentPage
 
 	private async Task AnimateHeatBadgeAsync(Color nextColor)
 	{
-		await StatusDot.ScaleToAsync(0.85, 90, Easing.CubicInOut);
+		await StatusDot.ScaleTo(0.85, 90, Easing.CubicInOut);
 		StatusDot.Color = nextColor;
-		await StatusDot.ScaleToAsync(1.0, 120, Easing.CubicOut);
+		await StatusDot.ScaleTo(1.0, 120, Easing.CubicOut);
 	}
 
 	private void UpdateControlLabels()
@@ -607,13 +686,22 @@ public partial class MainPage : ContentPage
 
 	private async Task ExecuteServiceCommandAsync(string command)
 	{
-		await _daemonApiClient.ServiceCommandAsync(command, CancellationToken.None);
-		await RefreshStatusAndEventsAsync();
+		try
+		{
+			await _daemonApiClient.ServiceCommandAsync(command, CancellationToken.None);
+			await RefreshStatusAndEventsAsync();
+		}
+		catch (HttpRequestException)
+		{
+			_daemonReachable = false;
+			ConnectionStateLabel.Text = "Daemon not running";
+			DiagnosticsPathLabel.Text = $"Cannot {command} daemon - service is offline.";
+		}
 	}
 
 	private async void OnReconnectClicked(object? sender, EventArgs e)
 	{
-		await RefreshAllAsync();
+		await SafeDaemonCallAsync("reconnect", RefreshAllAsync);
 	}
 
 	private void InitializeFirstRunState()
@@ -666,7 +754,7 @@ public partial class MainPage : ContentPage
 
 	private async void OnCompleteFirstRunClicked(object? sender, EventArgs e)
 	{
-		try
+		await SafeDaemonCallAsync("complete first-run setup", async () =>
 		{
 			await ApplyDaemonPresetAsync(_firstRunGoal);
 
@@ -696,11 +784,7 @@ public partial class MainPage : ContentPage
 			FirstRunCompleteChip.IsVisible = true;
 			FirstRunStatusLabel.Text = "Setup complete.";
 			ConfigStatusLabel.Text = "First-run setup complete. You can leave defaults as-is.";
-		}
-		catch
-		{
-			FirstRunStatusLabel.Text = "Could not complete setup. Reconnect daemon and try again.";
-		}
+		});
 	}
 
 	private void OnToggleThrottleReasonsClicked(object? sender, EventArgs e)
@@ -741,8 +825,8 @@ public partial class MainPage : ContentPage
 		await ControlScroll.ScrollToAsync(card, ScrollToPosition.Start, true);
 		if (_animationsEnabled)
 		{
-			await card.FadeToAsync(0.75, 70, Easing.CubicInOut);
-			await card.FadeToAsync(1.0, 120, Easing.CubicOut);
+			await card.FadeTo(0.75, 70, Easing.CubicInOut);
+			await card.FadeTo(1.0, 120, Easing.CubicOut);
 		}
 	}
 
@@ -764,7 +848,7 @@ public partial class MainPage : ContentPage
 			_ => ("Help", "No contextual help is available for this control.")
 		};
 
-		await DisplayAlertAsync(title, message, "Got it");
+		await DisplayAlert(title, message, "Got it");
 	}
 
 	private void OnRecentAppChanged(object? sender, EventArgs e)
@@ -831,29 +915,32 @@ public partial class MainPage : ContentPage
 
 	private async void OnApplyAppProfileClicked(object? sender, EventArgs e)
 	{
-		if (RecentAppsPicker.SelectedIndex < 0 || RecentAppsPicker.SelectedIndex >= _recentProfileApps.Count)
+		await SafeDaemonCallAsync("apply app profile", async () =>
 		{
-			ProfilesStatusLabel.Text = "Select a recent app first.";
-			return;
-		}
+			if (RecentAppsPicker.SelectedIndex < 0 || RecentAppsPicker.SelectedIndex >= _recentProfileApps.Count)
+			{
+				ProfilesStatusLabel.Text = "Select a recent app first.";
+				return;
+			}
 
-		var selected = _recentProfileApps[RecentAppsPicker.SelectedIndex];
-		var request = new SetAppProfileRequest
-		{
-			ClientAppId = selected.ClientAppId,
-			ProcessName = selected.ProcessName,
-			Signature = selected.Signature,
-			MaxConcurrency = (int)Math.Round(ProfileMaxConcurrencySlider.Value),
-			BackgroundCap = (int)Math.Round(ProfileBackgroundCapSlider.Value),
-			MaxOutputTokensClamp = (int)Math.Round(ProfileMaxOutputSlider.Value),
-			MaxPromptTokensClamp = (int)Math.Round(ProfileMaxPromptSlider.Value),
-			RequestsPerMinute = (int)Math.Round(ProfileRequestsPerMinuteSlider.Value),
-			TokensPerMinute = (int)Math.Round(ProfileTokensPerMinuteSlider.Value)
-		};
+			var selected = _recentProfileApps[RecentAppsPicker.SelectedIndex];
+			var request = new SetAppProfileRequest
+			{
+				ClientAppId = selected.ClientAppId,
+				ProcessName = selected.ProcessName,
+				Signature = selected.Signature,
+				MaxConcurrency = (int)Math.Round(ProfileMaxConcurrencySlider.Value),
+				BackgroundCap = (int)Math.Round(ProfileBackgroundCapSlider.Value),
+				MaxOutputTokensClamp = (int)Math.Round(ProfileMaxOutputSlider.Value),
+				MaxPromptTokensClamp = (int)Math.Round(ProfileMaxPromptSlider.Value),
+				RequestsPerMinute = (int)Math.Round(ProfileRequestsPerMinuteSlider.Value),
+				TokensPerMinute = (int)Math.Round(ProfileTokensPerMinuteSlider.Value)
+			};
 
-		var result = await _daemonApiClient.SetAppProfileAsync(request, CancellationToken.None);
-		ProfilesStatusLabel.Text = result?.Message ?? "Failed to apply app override.";
-		await RefreshProfilesAsync();
+			var result = await _daemonApiClient.SetAppProfileAsync(request, CancellationToken.None);
+			ProfilesStatusLabel.Text = result?.Message ?? "Failed to apply app override.";
+			await RefreshProfilesAsync();
+		});
 	}
 
 	private async void OnStartOnLoginToggled(object? sender, ToggledEventArgs e)
@@ -863,9 +950,12 @@ public partial class MainPage : ContentPage
 			return;
 		}
 
-		var result = await _daemonApiClient.SetAutostartAsync(e.Value, CancellationToken.None);
-		StartOnLoginStatusLabel.Text = result?.Message ?? "Autostart update failed.";
-		await RefreshAutostartAsync();
+		await SafeDaemonCallAsync("update autostart setting", async () =>
+		{
+			var result = await _daemonApiClient.SetAutostartAsync(e.Value, CancellationToken.None);
+			StartOnLoginStatusLabel.Text = result?.Message ?? "Autostart update failed.";
+			await RefreshAutostartAsync();
+		});
 	}
 
 	private async void OnStartClicked(object? sender, EventArgs e)
@@ -875,7 +965,7 @@ public partial class MainPage : ContentPage
 
 	private async void OnStopClicked(object? sender, EventArgs e)
 	{
-		var confirm = await DisplayAlertAsync(
+		var confirm = await DisplayAlert(
 			"Stop daemon?",
 			"Stopping the daemon will pause throttling for all apps until you start it again.",
 			"Stop daemon",
@@ -896,28 +986,31 @@ public partial class MainPage : ContentPage
 
 	private async void OnApplyClicked(object? sender, EventArgs e)
 	{
-		_draftConfig = BuildConfigFromControls();
-		var response = await _daemonApiClient.ApplyConfigAsync(_draftConfig, CancellationToken.None);
-		if (response is null)
+		await SafeDaemonCallAsync("apply configuration", async () =>
 		{
-			ConfigStatusLabel.Text = "Apply failed: no response";
-			return;
-		}
+			_draftConfig = BuildConfigFromControls();
+			var response = await _daemonApiClient.ApplyConfigAsync(_draftConfig, CancellationToken.None);
+			if (response is null)
+			{
+				ConfigStatusLabel.Text = "Apply failed: no response";
+				return;
+			}
 
-		if (!response.Success)
-		{
-			var first = response.Errors.FirstOrDefault();
-			ConfigStatusLabel.Text = first is null ? "Apply failed." : $"Apply failed: {first.Field} - {first.Message}";
-			return;
-		}
+			if (!response.Success)
+			{
+				var first = response.Errors.FirstOrDefault();
+				ConfigStatusLabel.Text = first is null ? "Apply failed." : $"Apply failed: {first.Field} - {first.Message}";
+				return;
+			}
 
-		_currentConfig = CloneConfig(response.AppliedConfig);
-		_draftConfig = CloneConfig(response.AppliedConfig);
-		ApplyConfigToControls(_currentConfig);
-		SetPending(false);
-		ConfigStatusLabel.Text = "Config applied atomically.";
-		await ShowApplyToastAsync();
-		await RefreshStatusAndEventsAsync();
+			_currentConfig = CloneConfig(response.AppliedConfig);
+			_draftConfig = CloneConfig(response.AppliedConfig);
+			ApplyConfigToControls(_currentConfig);
+			SetPending(false);
+			ConfigStatusLabel.Text = "Config applied atomically.";
+			await ShowApplyToastAsync();
+			await RefreshStatusAndEventsAsync();
+		});
 	}
 
 	private async Task ShowApplyToastAsync()
@@ -951,7 +1044,7 @@ public partial class MainPage : ContentPage
 
 	private async void OnResetDefaultsClicked(object? sender, EventArgs e)
 	{
-		var confirm = await DisplayAlertAsync(
+		var confirm = await DisplayAlert(
 			"Reset draft to defaults?",
 			"This replaces your current draft settings. It will not take effect until you click Apply.",
 			"Reset draft",
@@ -962,39 +1055,48 @@ public partial class MainPage : ContentPage
 			return;
 		}
 
-		var response = await _daemonApiClient.ResetConfigAsync(false, CancellationToken.None);
-		if (response is null)
+		await SafeDaemonCallAsync("reset to defaults", async () =>
 		{
-			ConfigStatusLabel.Text = "Defaults request failed.";
-			return;
-		}
+			var response = await _daemonApiClient.ResetConfigAsync(false, CancellationToken.None);
+			if (response is null)
+			{
+				ConfigStatusLabel.Text = "Defaults request failed.";
+				return;
+			}
 
-		_draftConfig = CloneConfig(response.AppliedConfig);
-		ApplyConfigToControls(_draftConfig);
-		UpdateControlLabels();
-		SetPending(true);
-		ConfigStatusLabel.Text = "Defaults loaded into draft. Click Apply to commit.";
+			_draftConfig = CloneConfig(response.AppliedConfig);
+			ApplyConfigToControls(_draftConfig);
+			UpdateControlLabels();
+			SetPending(true);
+			ConfigStatusLabel.Text = "Defaults loaded into draft. Click Apply to commit.";
+		});
 	}
 
 	private async void OnExportDiagnosticsClicked(object? sender, EventArgs e)
 	{
-		var response = await _daemonApiClient.ExportDiagnosticsAsync(IncludePathsSwitch.IsToggled, IncludeVerboseSwitch.IsToggled, CancellationToken.None);
-		DiagnosticsPathLabel.Text = response is null ? "Diagnostics export failed." : $"Exported: {response.OutputPath} ({response.BytesWritten} bytes)";
-		await RefreshStatusAndEventsAsync();
+		await SafeDaemonCallAsync("export diagnostics", async () =>
+		{
+			var response = await _daemonApiClient.ExportDiagnosticsAsync(IncludePathsSwitch.IsToggled, IncludeVerboseSwitch.IsToggled, CancellationToken.None);
+			DiagnosticsPathLabel.Text = response is null ? "Diagnostics export failed." : $"Exported: {response.OutputPath} ({response.BytesWritten} bytes)";
+			await RefreshStatusAndEventsAsync();
+		});
 	}
 
 	private async void OnPreviewDiagnosticsClicked(object? sender, EventArgs e)
 	{
-		var preview = await _daemonApiClient.GetDiagnosticsPreviewAsync(IncludePathsSwitch.IsToggled, IncludeVerboseSwitch.IsToggled, CancellationToken.None);
-		if (preview is null)
+		await SafeDaemonCallAsync("preview diagnostics", async () =>
 		{
-			DiagnosticsPreviewLabel.Text = "Could not load diagnostics preview.";
-			return;
-		}
+			var preview = await _daemonApiClient.GetDiagnosticsPreviewAsync(IncludePathsSwitch.IsToggled, IncludeVerboseSwitch.IsToggled, CancellationToken.None);
+			if (preview is null)
+			{
+				DiagnosticsPreviewLabel.Text = "Could not load diagnostics preview.";
+				return;
+			}
 
-		var sections = string.Join(", ", preview.IncludedSections);
-		var rules = string.Join(" ", preview.RedactionRules);
-		DiagnosticsPreviewLabel.Text = $"Includes: {sections}. {rules} {preview.Summary}";
+			var sections = string.Join(", ", preview.IncludedSections);
+			var rules = string.Join(" ", preview.RedactionRules);
+			DiagnosticsPreviewLabel.Text = $"Includes: {sections}. {rules} {preview.Summary}";
+		});
 	}
 
 	private async void OnCopySummaryClicked(object? sender, EventArgs e)
@@ -1101,28 +1203,39 @@ public partial class MainPage : ContentPage
 
 	private async Task ApplyDaemonPresetAsync(string presetName)
 	{
-		var preview = await _daemonApiClient.PreviewPresetAsync(presetName, CancellationToken.None);
-		if (preview is not null)
+		try
 		{
-			PresetDiffLabel.Text = preview.Diffs.Count == 0
-				? "No config changes."
-				: string.Join(Environment.NewLine, preview.Diffs.Select(d => $"{d.Field}: {d.Before} → {d.After}"));
-		}
+			var preview = await _daemonApiClient.PreviewPresetAsync(presetName, CancellationToken.None);
+			if (preview is not null)
+			{
+				PresetDiffLabel.Text = preview.Diffs.Count == 0
+					? "No config changes."
+					: string.Join(Environment.NewLine, preview.Diffs.Select(d => $"{d.Field}: {d.Before} → {d.After}"));
+			}
 
-		var response = await _daemonApiClient.ApplyPresetAsync(presetName, CancellationToken.None);
-		if (response is null || !response.Success)
+			var response = await _daemonApiClient.ApplyPresetAsync(presetName, CancellationToken.None);
+			if (response is null || !response.Success)
+			{
+				PresetStatusLabel.Text = $"Preset apply failed: {presetName}";
+				return;
+			}
+
+			_currentConfig = CloneConfig(response.AppliedConfig);
+			_draftConfig = CloneConfig(response.AppliedConfig);
+			ApplyConfigToControls(_currentConfig);
+			UpdateControlLabels();
+			SetPending(false);
+			PresetStatusLabel.Text = $"Applied preset: {presetName}";
+			await RefreshStatusAndEventsAsync();
+		}
+		catch (HttpRequestException)
 		{
-			PresetStatusLabel.Text = $"Preset apply failed: {presetName}";
-			return;
+			PresetStatusLabel.Text = $"Cannot apply preset - daemon not running";
 		}
-
-		_currentConfig = CloneConfig(response.AppliedConfig);
-		_draftConfig = CloneConfig(response.AppliedConfig);
-		ApplyConfigToControls(_currentConfig);
-		UpdateControlLabels();
-		SetPending(false);
-		PresetStatusLabel.Text = $"Applied preset: {presetName}";
-		await RefreshStatusAndEventsAsync();
+		catch (System.Text.Json.JsonException ex)
+		{
+			PresetStatusLabel.Text = $"JSON error: {ex.Message}";
+		}
 	}
 
 	private async void OnQuietPresetClicked(object? sender, EventArgs e)
@@ -1189,14 +1302,14 @@ public partial class MainPage : ContentPage
 
 	private async void OnRunAuditHarnessClicked(object? sender, EventArgs e)
 	{
-		var lines = new List<string>();
-		void Record(string name, bool pass, string evidence)
+		await SafeDaemonCallAsync("run audit harness", async () =>
 		{
-			lines.Add($"{(pass ? "✅" : "❌")} {name} -- {evidence}");
-		}
+			var lines = new List<string>();
+			void Record(string name, bool pass, string evidence)
+			{
+				lines.Add($"{(pass ? "✅" : "❌")} {name} -- {evidence}");
+			}
 
-		try
-		{
 			await RefreshAllAsync();
 			Record("connect/reconnect", _latestStatus?.Connected == true, _latestStatus?.Connected == true ? "status connected" : "status disconnected");
 
@@ -1239,12 +1352,8 @@ public partial class MainPage : ContentPage
 			                 && _eventBuffer.Any(e => e.Message.Contains("adaptive clamp", StringComparison.OrdinalIgnoreCase))
 			                 && _eventBuffer.Any(e => e.Message.Contains("diagnostics exported", StringComparison.OrdinalIgnoreCase));
 			Record("verify event markers", hasMarkers, hasMarkers ? "config/clamp/diagnostics markers present" : "missing expected markers");
-		}
-		catch (Exception ex)
-		{
-			Record("audit harness execution", false, ex.Message);
-		}
 
-		AuditResultsEditor.Text = string.Join(Environment.NewLine, lines);
+			AuditResultsEditor.Text = string.Join(Environment.NewLine, lines);
+		});
 	}
 }
