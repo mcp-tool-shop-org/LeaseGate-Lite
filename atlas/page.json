@@ -1,0 +1,131 @@
+{
+  "authored": [
+    ".github/",
+    "root",
+    "site/"
+  ],
+  "breaks": [],
+  "changes": {
+    "first": true
+  },
+  "changesTogether": [],
+  "changesTogetherNote": [
+    "Window: 180 days; a pair counts from 3 shared commits, since the window holds fewer than 30 qualifying commits."
+  ],
+  "changesTogetherWithTests": 0,
+  "commit": "2461665cfaecd691958e4b8575a5a8bbfe296f93",
+  "defaultBranch": "main",
+  "derived": "9 parts, mostly C# (28 files), PowerShell (8), CSS (2), TypeScript (2), Astro (1) and JavaScript (1). Work enters through 2 doors; CI and Deploy site to GitHub Pages each reach 1 part, and CI is followed because a pull request goes through it. It deploys a site to GitHub Pages.",
+  "doors": [
+    {
+      "checks": [],
+      "checksCount": 0,
+      "checksMore": 0,
+      "file": ".github/workflows/ci.yml",
+      "id": ".github/workflows/ci.yml",
+      "landings": [],
+      "name": "CI",
+      "pushes": false,
+      "reach": [
+        {
+          "boundary": "tests",
+          "depth": 0,
+          "files": 1
+        }
+      ],
+      "runs": [
+        "tests/LeaseGateLite.Tests/LeaseGateLite.Tests.csproj"
+      ],
+      "runsCount": 1,
+      "runsMore": 0,
+      "sends": [],
+      "stages": [],
+      "triggers": [
+        "on a pull request to main",
+        "on a push to main touching 8 paths",
+        "or by hand"
+      ]
+    },
+    {
+      "checks": [],
+      "checksCount": 0,
+      "checksMore": 0,
+      "file": ".github/workflows/pages.yml",
+      "id": ".github/workflows/pages.yml",
+      "landings": [],
+      "name": "Deploy site to GitHub Pages",
+      "pushes": false,
+      "reach": [
+        {
+          "boundary": "site",
+          "depth": 0,
+          "files": 5
+        }
+      ],
+      "runs": [
+        "site/astro.config.mjs",
+        "site/src/"
+      ],
+      "runsCount": 2,
+      "runsMore": 0,
+      "sends": [
+        "deploys the site"
+      ],
+      "stages": [],
+      "triggers": [
+        "on a push to main touching 2 paths",
+        "or by hand"
+      ]
+    }
+  ],
+  "duplicates": [],
+  "duplicatesLead": null,
+  "duplicatesNote": [],
+  "edges": [],
+  "engine": "1.24.0",
+  "generated": [],
+  "generatedAt": "2026-10-01T03:07:23.231Z",
+  "limits": [
+    "Statistics confidence is low: fewer than 30 qualifying commits in the window, and fewer than 20 source files reach 10 revisions."
+  ],
+  "mainDoor": ".github/workflows/ci.yml",
+  "partLabels": {
+    ".github": ".github",
+    "LeaseGateLite.App": "LeaseGateLite.App",
+    "LeaseGateLite.Contracts": "LeaseGateLite.Contracts",
+    "LeaseGateLite.Daemon": "LeaseGateLite.Daemon",
+    "LeaseGateLite.Tray": "LeaseGateLite.Tray",
+    "root": "the repository root",
+    "scripts": "scripts",
+    "site": "the site",
+    "tests": "tests"
+  },
+  "parts": 9,
+  "readers": [],
+  "repo": "mcp-tool-shop-org/LeaseGate-Lite",
+  "sequences": [],
+  "startDoor": ".github/workflows/ci.yml",
+  "startHere": [],
+  "startNote": "CI runs no code this map can follow, so there is no path of files to read in order.",
+  "summary": null,
+  "summaryFrom": null,
+  "testFiles": 3,
+  "testedBy": {},
+  "unnamedWrites": 0,
+  "unread": [],
+  "unreadCode": [
+    "LeaseGateLite.App",
+    "LeaseGateLite.Contracts",
+    "LeaseGateLite.Daemon",
+    "LeaseGateLite.Tray",
+    "scripts"
+  ],
+  "unreadCodeUses": "LeaseGateLite.App, LeaseGateLite.Contracts, LeaseGateLite.Daemon, LeaseGateLite.Tray and scripts hold only C# and PowerShell files, which this map does not read, so what uses them cannot be seen.",
+  "unreadFiles": 0,
+  "unreadNote": [],
+  "untested": [],
+  "untestedNote": [
+    "LeaseGateLite.App, LeaseGateLite.Contracts, LeaseGateLite.Daemon, LeaseGateLite.Tray and scripts hold only C# and PowerShell files, which this map does not read, so whether a test touches them cannot be seen."
+  ],
+  "written": 0
+}
