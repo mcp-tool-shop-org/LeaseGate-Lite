@@ -1,0 +1,1101 @@
+{
+  "boundaries": [
+    {
+      "dynamicReads": 0,
+      "dynamicSpawns": 0,
+      "dynamicSpawnsInTests": 0,
+      "dynamicWrites": 0,
+      "entryPoints": [],
+      "externals": 0,
+      "files": [
+        {
+          "hash": "a321674a0e407e8cc52b8e81e844d9ebaae94ddd3e1844613aeb7d52cd412854",
+          "path": ".github/ISSUE_TEMPLATE/bug_report.md"
+        },
+        {
+          "hash": "d241fd116a2620c838390ff19d46b78d0e0a6314fa246aec264b5ad81066ae33",
+          "path": ".github/ISSUE_TEMPLATE/feature_request.md"
+        },
+        {
+          "hash": "f38f52d7a9e95b668f55700352febd13e72f317fe2f578e7ea89b21d819b946e",
+          "path": ".github/SECURITY.md"
+        },
+        {
+          "hash": "61039dde5d68430f183521347e619f709613dd227a492fe29fa5f482d6f6ecdd",
+          "path": ".github/dependabot.yml"
+        },
+        {
+          "hash": "20094b79c51f7dcaa8b2d91235d6796bbb7073f133afbf5e7faea590a1bddb18",
+          "path": ".github/workflows/ci.yml"
+        },
+        {
+          "hash": "3d5bb4e5e7614d7116c95bd59ed0a74c9876ad323efe43e0abd121ed535a4de0",
+          "path": ".github/workflows/pages.yml"
+        }
+      ],
+      "globs": [
+        ".github/**"
+      ],
+      "importConfidence": "full",
+      "name": ".github",
+      "origin": "authored",
+      "role": "config",
+      "testedBy": 0,
+      "unresolvedSites": 0
+    },
+    {
+      "dynamicReads": 0,
+      "dynamicSpawns": 0,
+      "dynamicSpawnsInTests": 0,
+      "dynamicWrites": 0,
+      "entryPoints": [],
+      "externals": 0,
+      "files": [
+        {
+          "hash": "00472f647cc67b470580da547a7fb8d7bc91d937ad8c1dd05e29d115fd1d4a1a",
+          "path": "src/LeaseGateLite.App/App.xaml"
+        },
+        {
+          "hash": "5b571475bcbd766d50753c53760ebf56fdd7cb9263fe80b589113224ec4df11c",
+          "path": "src/LeaseGateLite.App/App.xaml.cs"
+        },
+        {
+          "hash": "8ec8922be25d5cf5fbbadf24dba1bc28a62de1622824ed40b8bb52a257ac5058",
+          "path": "src/LeaseGateLite.App/AppShell.xaml"
+        },
+        {
+          "hash": "36608dae612478b896c4363a6ed5a200ade84f17b9f45eb6a19c7da073ab2bb6",
+          "path": "src/LeaseGateLite.App/AppShell.xaml.cs"
+        },
+        {
+          "hash": "70b0df6054dbfc12eb8a12863a62cfbeb86e0c822e86886ce6ff52693bbfdfc9",
+          "path": "src/LeaseGateLite.App/DaemonApiClient.cs"
+        },
+        {
+          "hash": "9a7a0a81b32bde38f145392f3b1b35143bba496b6dac51dfa08cca7b72d36c20",
+          "path": "src/LeaseGateLite.App/LeaseGateLite.App.csproj"
+        },
+        {
+          "hash": "43c490bfb4fc5c399141d4f0df291d4bc01dc49f80bc6030b7bd7b77fa60441c",
+          "path": "src/LeaseGateLite.App/MainPage.xaml"
+        },
+        {
+          "hash": "7e4cf9d977a7d46c92089445be0b115ddae1cd94160f778dd2b0e9062560ce07",
+          "path": "src/LeaseGateLite.App/MainPage.xaml.cs"
+        },
+        {
+          "hash": "fb31da13b637c83a62ef82197e63237fe6eefb353362aed0bc7a74254c9f6d81",
+          "path": "src/LeaseGateLite.App/MauiProgram.cs"
+        },
+        {
+          "hash": "ecac074e169810efc9f1ea0d7667e8a7683d76da2999a63a50c514fcd564db27",
+          "path": "src/LeaseGateLite.App/Platforms/Android/AndroidManifest.xml"
+        },
+        {
+          "hash": "519d1b0789bdb6c1d5fcd1163bab801ee0e3d1023ad1e3506553fc0b09438566",
+          "path": "src/LeaseGateLite.App/Platforms/Android/MainActivity.cs"
+        },
+        {
+          "hash": "3a164dc4e65c90bf462b4135fa9b6edb92e266559bc1048b424fea7942c1d47a",
+          "path": "src/LeaseGateLite.App/Platforms/Android/MainApplication.cs"
+        },
+        {
+          "hash": "785f8cc2287b9036ec769b23b490b22a3e074aed9a812ff06b8fdb615e30e8f7",
+          "path": "src/LeaseGateLite.App/Platforms/Android/Resources/values/colors.xml"
+        },
+        {
+          "hash": "7517e78e0317361c29fe21e2fa05ad95024e956d9b9f754d7d9a0b2aff97185f",
+          "path": "src/LeaseGateLite.App/Platforms/MacCatalyst/AppDelegate.cs"
+        },
+        {
+          "hash": "b1362bf3f8d84b43a0f229e3644b8e911cec21689155fc91e184ac3a56145ca6",
+          "path": "src/LeaseGateLite.App/Platforms/MacCatalyst/Entitlements.plist"
+        },
+        {
+          "hash": "1083735a3b94518437ac8280b0145907aa9084211cd2607d2e6d94596ec60626",
+          "path": "src/LeaseGateLite.App/Platforms/MacCatalyst/Info.plist"
+        },
+        {
+          "hash": "fcd08ebbcba55d36308ffa0fc5b901729eb6bde450755a0f7c9eda79b9fcba3a",
+          "path": "src/LeaseGateLite.App/Platforms/MacCatalyst/Program.cs"
+        },
+        {
+          "hash": "163043679a3dd864f913968a953ae1b4c87e53d643c4ad9c1f88c2a2555aa4b0",
+          "path": "src/LeaseGateLite.App/Platforms/Windows/App.xaml"
+        },
+        {
+          "hash": "0b4a193ca5ebfaca2b0865e9666bf0b8c3d91e47ce47481be0964f8afddcf518",
+          "path": "src/LeaseGateLite.App/Platforms/Windows/App.xaml.cs"
+        },
+        {
+          "hash": "e58e3e269a13995055a702e69e8d610d0f43ccce7fc33b3d9b36d2256060745d",
+          "path": "src/LeaseGateLite.App/Platforms/Windows/Package.appxmanifest"
+        },
+        {
+          "hash": "13eecc827a6074dc917e4d779dd18fefd027c1dc6e3b0a6063566d12472787e0",
+          "path": "src/LeaseGateLite.App/Platforms/Windows/app.manifest"
+        },
+        {
+          "hash": "7517e78e0317361c29fe21e2fa05ad95024e956d9b9f754d7d9a0b2aff97185f",
+          "path": "src/LeaseGateLite.App/Platforms/iOS/AppDelegate.cs"
+        },
+        {
+          "hash": "da57689ff54e53a03a5fc646b4a3be0559c1e2c5fdf3668fd248d3744e546a5b",
+          "path": "src/LeaseGateLite.App/Platforms/iOS/Info.plist"
+        },
+        {
+          "hash": "fcd08ebbcba55d36308ffa0fc5b901729eb6bde450755a0f7c9eda79b9fcba3a",
+          "path": "src/LeaseGateLite.App/Platforms/iOS/Program.cs"
+        },
+        {
+          "hash": "c2cfc0316bb579011018f04b90c8cc83e21cc8e7ca88262c3213db239e6afaa9",
+          "path": "src/LeaseGateLite.App/Platforms/iOS/Resources/PrivacyInfo.xcprivacy"
+        },
+        {
+          "hash": "12e54b598f0759f17ff38b030206359c7244319edda6b5dfaf4991d6b2ce57dd",
+          "path": "src/LeaseGateLite.App/Properties/launchSettings.json"
+        },
+        {
+          "hash": "104e6939b918936b129fd87cdf2fdb8b3c111ec23da251b2c010ab2801c1fbab",
+          "path": "src/LeaseGateLite.App/Resources/AppIcon/appicon.svg"
+        },
+        {
+          "hash": "b16c1a74ac278ebf1af93af295e6bd2b8c534331bdd4bc4603c3d6e04a1815d9",
+          "path": "src/LeaseGateLite.App/Resources/AppIcon/appiconfg.svg"
+        },
+        {
+          "hash": "a26696bc3a91f025c6ac730b712ac4e6640a4eda73c833b31854fbf458a2307f",
+          "path": "src/LeaseGateLite.App/Resources/Fonts/OpenSans-Regular.ttf"
+        },
+        {
+          "hash": "be4d8f3cef0cf1bb8860f7378c5f09786e1df49c98d83949558993073447e07e",
+          "path": "src/LeaseGateLite.App/Resources/Fonts/OpenSans-Semibold.ttf"
+        },
+        {
+          "hash": "93b5cdf74a8d22a5956eca9703f62e1b26d618cec20914255ee7f5e595b98ae7",
+          "path": "src/LeaseGateLite.App/Resources/Images/dotnet_bot.png"
+        },
+        {
+          "hash": "502854e97277d11c50ceef5082fd4bca622ef921e7c3bc6e013b32de88df311a",
+          "path": "src/LeaseGateLite.App/Resources/Raw/AboutAssets.txt"
+        },
+        {
+          "hash": "b16c1a74ac278ebf1af93af295e6bd2b8c534331bdd4bc4603c3d6e04a1815d9",
+          "path": "src/LeaseGateLite.App/Resources/Splash/splash.svg"
+        },
+        {
+          "hash": "ff7495cda3c01b413b6b568c50f59ea95da5d8735600557e64514e0ca6e3f8e4",
+          "path": "src/LeaseGateLite.App/Resources/Styles/Colors.xaml"
+        },
+        {
+          "hash": "404d58659960715a06d98b84448bc05adc382511b5df0a306d731a8e8bb0e00e",
+          "path": "src/LeaseGateLite.App/Resources/Styles/Styles.xaml"
+        }
+      ],
+      "globs": [
+        "src/LeaseGateLite.App/**"
+      ],
+      "importConfidence": "full",
+      "name": "LeaseGateLite.App",
+      "origin": "authored",
+      "role": "code",
+      "testedBy": 0,
+      "unresolvedSites": 0
+    },
+    {
+      "dynamicReads": 0,
+      "dynamicSpawns": 0,
+      "dynamicSpawnsInTests": 0,
+      "dynamicWrites": 0,
+      "entryPoints": [],
+      "externals": 0,
+      "files": [
+        {
+          "hash": "300ad3b29abcd0173e33fe36dbab1404862ee60880d1bcc5a1bf10eb040078f0",
+          "path": "src/LeaseGateLite.Contracts/ConfigModels.cs"
+        },
+        {
+          "hash": "fbb10dd15ae99164e5fb23e893d5dd39129cd4bf6b069702584e52dcc2653f9d",
+          "path": "src/LeaseGateLite.Contracts/Enums.cs"
+        },
+        {
+          "hash": "6ac3313b36535df0a715bc652c93f2b4cbe12fe94d6588c3501e61794d565f29",
+          "path": "src/LeaseGateLite.Contracts/EventModels.cs"
+        },
+        {
+          "hash": "11c0c110e19c9eaeaef66a0382f7a3e4ff6ab395d99ca6664e1ba378371cc47c",
+          "path": "src/LeaseGateLite.Contracts/LeaseGateLite.Contracts.csproj"
+        },
+        {
+          "hash": "67a6434d7a30b627e7798bd1a68fc23a56f9b0d4d11c14dc5fa73551a6948c90",
+          "path": "src/LeaseGateLite.Contracts/PresetModels.cs"
+        },
+        {
+          "hash": "8a4efe281e6fc67a017e7b05962e1be655c7f2675e9903735b96e6a6564d3f12",
+          "path": "src/LeaseGateLite.Contracts/ProfileModels.cs"
+        },
+        {
+          "hash": "2447b16168340c293fdaa7e0379099264e04b3ee931e864974d3d426a24d388c",
+          "path": "src/LeaseGateLite.Contracts/StatusModels.cs"
+        }
+      ],
+      "globs": [
+        "src/LeaseGateLite.Contracts/**"
+      ],
+      "importConfidence": "full",
+      "name": "LeaseGateLite.Contracts",
+      "origin": "authored",
+      "role": "code",
+      "testedBy": 0,
+      "unresolvedSites": 0
+    },
+    {
+      "dynamicReads": 0,
+      "dynamicSpawns": 0,
+      "dynamicSpawnsInTests": 0,
+      "dynamicWrites": 0,
+      "entryPoints": [],
+      "externals": 0,
+      "files": [
+        {
+          "hash": "43b57e9877866e3c642f266c8741ff262e36f9e32f45c50da9a62052eff51fa7",
+          "path": "src/LeaseGateLite.Daemon/AutostartManager.cs"
+        },
+        {
+          "hash": "9b3e441ed245db56613654522bde097ed48566ce9adefd5fcd5dfdd3f7973c46",
+          "path": "src/LeaseGateLite.Daemon/DaemonState.cs"
+        },
+        {
+          "hash": "20784868a5aa00c7af553cafc0b63447c60a84529e095f8a5cca5a818dc6131d",
+          "path": "src/LeaseGateLite.Daemon/ISystemMetrics.cs"
+        },
+        {
+          "hash": "61d7b1fc45a046e8dd56cf52fd64699afb7da054606349e43f753f9f698fdcb2",
+          "path": "src/LeaseGateLite.Daemon/LeaseGateLite.Daemon.csproj"
+        },
+        {
+          "hash": "82be4afedcabfb9939b2c78b6e24ca563cf703a7a23d05bb0334d3abe7cbb200",
+          "path": "src/LeaseGateLite.Daemon/LeaseGateLite.Daemon.http"
+        },
+        {
+          "hash": "1b7acfd02fcb432af04ebf8d7d1452edb6758d5819da208a1adef6cbcd969bb5",
+          "path": "src/LeaseGateLite.Daemon/Program.cs"
+        },
+        {
+          "hash": "368cd4ee6ff1544fd453ecbcf2af4a98b8a33fe57b39433ab482c0bd807b002b",
+          "path": "src/LeaseGateLite.Daemon/Properties/launchSettings.json"
+        },
+        {
+          "hash": "765fc5e13603051cf0e26626e7edff7f3ad53250deaa0f2b20953d5b4e3ddfc7",
+          "path": "src/LeaseGateLite.Daemon/SingleInstanceGuard.cs"
+        },
+        {
+          "hash": "708cfb48d4e4cfda620cb9608b045629f66e838c7bc815727e064f238fb706fa",
+          "path": "src/LeaseGateLite.Daemon/WindowsSystemMetrics.cs"
+        },
+        {
+          "hash": "817db0bf2ecca78364c41dbaf7949bf2504cf47a1c3d0d54f3be8178fefc030b",
+          "path": "src/LeaseGateLite.Daemon/appsettings.Development.json"
+        },
+        {
+          "hash": "2d8bb40059df22089b94c025be8baad5a869b72d4d755d199c872f03bfe6f225",
+          "path": "src/LeaseGateLite.Daemon/appsettings.json"
+        }
+      ],
+      "globs": [
+        "src/LeaseGateLite.Daemon/**"
+      ],
+      "importConfidence": "full",
+      "name": "LeaseGateLite.Daemon",
+      "origin": "authored",
+      "role": "code",
+      "testedBy": 0,
+      "unresolvedSites": 0
+    },
+    {
+      "dynamicReads": 0,
+      "dynamicSpawns": 0,
+      "dynamicSpawnsInTests": 0,
+      "dynamicWrites": 0,
+      "entryPoints": [],
+      "externals": 0,
+      "files": [
+        {
+          "hash": "b39e8820b490e3a2b9c8f45444f9b9db124f3f8f91e484f1826f1dcc82a4576c",
+          "path": "src/LeaseGateLite.Tray/LeaseGateLite.Tray.csproj"
+        },
+        {
+          "hash": "779c8eeee399a5921486434cb253f332a1023299f669eb05d0ac689d8efc9a51",
+          "path": "src/LeaseGateLite.Tray/Program.cs"
+        },
+        {
+          "hash": "a2e4b896322b2c0b7f7f078e58c8e8548fd73faf27be327e182b97639a3c6aba",
+          "path": "src/LeaseGateLite.Tray/TrayApplicationContext.cs"
+        }
+      ],
+      "globs": [
+        "src/LeaseGateLite.Tray/**"
+      ],
+      "importConfidence": "full",
+      "name": "LeaseGateLite.Tray",
+      "origin": "authored",
+      "role": "code",
+      "testedBy": 0,
+      "unresolvedSites": 0
+    },
+    {
+      "dynamicReads": 0,
+      "dynamicSpawns": 0,
+      "dynamicSpawnsInTests": 0,
+      "dynamicWrites": 0,
+      "entryPoints": [],
+      "externals": 0,
+      "files": [
+        {
+          "hash": "a2ed2024c8910ce3fe564c441f179cb93313ce7e57669b4e871f14db43cc12d1",
+          "path": ".gitignore"
+        },
+        {
+          "hash": "5d5378035300300bc4366836abde3b1a3f6fd14ad46095521c5c28abc1793cc3",
+          "path": "CHANGELOG.md"
+        },
+        {
+          "hash": "b75b31f870904fc72a2bc47046e25443ad761787696bef1691c2ed12603794fb",
+          "path": "ISSUE_REPORT.md"
+        },
+        {
+          "hash": "367e5141e4f5884e5791c4021f33a9faa958840a5decf44e1b273a87aad1c459",
+          "path": "LICENSE"
+        },
+        {
+          "hash": "52b3af339383ed1f109410b8211d21a3a902e9255d4cb60192477d75d67ccc88",
+          "path": "LeaseGateLite.slnx"
+        },
+        {
+          "hash": "7b9d70b49d32c6785a409600b3e1e28d471f78e04b081531ae0109a07ed0cf1b",
+          "path": "README.es.md"
+        },
+        {
+          "hash": "b15c348e339c6d14564ba9ee0cca27037451a9fc7f34fb95d5ea13a549a07d5c",
+          "path": "README.fr.md"
+        },
+        {
+          "hash": "08ed957610ccf9d59f1ec048d8c88989653d840003cb4951c4ba0703760a1f0a",
+          "path": "README.hi.md"
+        },
+        {
+          "hash": "03a80926c804abe66a9d76410f1c11090e959fa6b08b1b43082694056fac70b0",
+          "path": "README.it.md"
+        },
+        {
+          "hash": "5e63446338d0fd3ab756036e6ccb7272d4dd1e20b74b207e863d28a59c58f90a",
+          "path": "README.ja.md"
+        },
+        {
+          "hash": "737d84632f7a97b5a2bcdfcb856523ba372abf194cdd72daac1de9e8fa321bd9",
+          "path": "README.md"
+        },
+        {
+          "hash": "e610cbc680fec5ce6495afa097fbeadf4e25470d2cfd26e79aa5b591569d98a7",
+          "path": "README.pt-BR.md"
+        },
+        {
+          "hash": "19681e2156c110d8a218567def6fb46de1beb212cd092a52100202c716a09ee8",
+          "path": "README.zh.md"
+        },
+        {
+          "hash": "9d1c0584cb84b9d85239168d66c6ff84899e16046da52b6463a9f3c778e6121d",
+          "path": "RELEASE_CAPTURE_GUIDE.md"
+        },
+        {
+          "hash": "27799c50ad5d310c0f862e287b31b4e4a31a56427d45fa47cac125d641aa9fd5",
+          "path": "RELEASE_GATE.md"
+        },
+        {
+          "hash": "9e04242a0e77d3e9f68aad641ff8d25d1aac6e85aa4b618d4041482429fd6b04",
+          "path": "RELEASE_GATE_REPORT.md"
+        },
+        {
+          "hash": "655cb34f16fb8059d2a693ae5f561339ccb89a10d4955897422a03a7e15dec57",
+          "path": "RELEASE_NOTES_v0.1.0.md"
+        },
+        {
+          "hash": "9954eb7763ba5bb7be6ec9ad76c384d9a459676877618938527b8c1e056937d8",
+          "path": "SCORECARD.md"
+        },
+        {
+          "hash": "ef9e570f66f37cc22d84510cd088aed5a0ce78e6382085f0d6f35ca863c9a90d",
+          "path": "SECURITY.md"
+        },
+        {
+          "hash": "56b04bbfd55fcad58bbfe2a8e99c2eb02f96d3d1a3e23106efcc1ed4e26dba74",
+          "path": "SHIP_GATE.md"
+        },
+        {
+          "hash": "d88137942a85c748c4e81f9b7f5f71aa0bf5000388c60e568eb2f0338b18710f",
+          "path": "USABILITY_CHECKLIST.md"
+        },
+        {
+          "hash": "3bbee497b894749bc9bac199d9e1c92a679e4c3717a88dbc3b0974e1fae70b83",
+          "path": "get-crash-logs.ps1"
+        },
+        {
+          "hash": "670985233c51666ae298f53781cbf1e7b6a1359672da76e165fbea349077f2e2",
+          "path": "logo.jpg"
+        }
+      ],
+      "globs": [
+        "*"
+      ],
+      "importConfidence": "full",
+      "name": "root",
+      "origin": "authored",
+      "role": "docs",
+      "testedBy": 0,
+      "unresolvedSites": 0
+    },
+    {
+      "dynamicReads": 0,
+      "dynamicSpawns": 0,
+      "dynamicSpawnsInTests": 0,
+      "dynamicWrites": 0,
+      "entryPoints": [],
+      "externals": 0,
+      "files": [
+        {
+          "hash": "16e5006c9adf900ed8bd2c02e770fff590384b2e60c942d4b93b5dc95b398487",
+          "path": "scripts/demo-60s-v0.1.0.ps1"
+        },
+        {
+          "hash": "44f85b196e5b27585d4cf3ea0a38c01e9c33639bcda6b5b2a51a534872711519",
+          "path": "scripts/demo-app-profile-override.ps1"
+        },
+        {
+          "hash": "eefd8d25e6cc9dfd4d4175501a01e27d69b5b880f46815ba7a65e87293e3c835",
+          "path": "scripts/demo-high-load-recovery.ps1"
+        },
+        {
+          "hash": "8dfbfa7f63dccfa100c85e6d082e02df38b7fefe03af6407d08b39c6748670fe",
+          "path": "scripts/demo-laptop-mode.ps1"
+        },
+        {
+          "hash": "3d3cb1cbca3ef72d3aafd55dc9101466037950b8b9c0e8c76d4a4b34a54ad0e8",
+          "path": "scripts/install-local.ps1"
+        },
+        {
+          "hash": "f33100ce8fb4e053c2146f7f8433b1533b1c3eeddb31ba1760132b2dfbb22beb",
+          "path": "scripts/package-v0.1.0.ps1"
+        },
+        {
+          "hash": "a9517d722da0897fe8ced41e587028a1c9b6688d4c805ee359d8e32f6b9296b7",
+          "path": "scripts/run-release-gate.ps1"
+        }
+      ],
+      "globs": [
+        "scripts/**"
+      ],
+      "importConfidence": "full",
+      "name": "scripts",
+      "origin": "authored",
+      "role": "code",
+      "testedBy": 0,
+      "unresolvedSites": 0
+    },
+    {
+      "dynamicReads": 0,
+      "dynamicSpawns": 0,
+      "dynamicSpawnsInTests": 0,
+      "dynamicWrites": 0,
+      "entryPoints": [],
+      "externals": 0,
+      "files": [
+        {
+          "hash": "ee4e5b6513f48dfc376cdbacbb7b7373e00020348460bcf2ff8ef0c109056f1e",
+          "path": "site/astro.config.mjs"
+        },
+        {
+          "hash": "af5d4f54dca60686724d306eb58759fb25b6f5ba4d66559ab84a968112a184e5",
+          "path": "site/package-lock.json"
+        },
+        {
+          "hash": "17ed487ab5049bb52f8c5e35f77f21be7da639f1fb6a3fa70e9b02ffabfe7be6",
+          "path": "site/package.json"
+        },
+        {
+          "constantOnly": true,
+          "hash": "ee756dfba4122d2acc94a39b2555d9f200fff56a87a8c0b10f9cd01df26a8b62",
+          "path": "site/src/content.config.ts"
+        },
+        {
+          "hash": "8f5c9f37821938a6253443f1cf3af882bdeef7c89c4035bc092612ad1b854ab8",
+          "path": "site/src/content/docs/handbook/beginners.md"
+        },
+        {
+          "hash": "531e0b0734a85a8461204023e627d4e3fca130b3c3276cf9cfb69928c229eb02",
+          "path": "site/src/content/docs/handbook/configuration.md"
+        },
+        {
+          "hash": "cd4268f14751106447e2f070a1461d8feea1698779d2ab12c94f31c2f1351276",
+          "path": "site/src/content/docs/handbook/control-panel.md"
+        },
+        {
+          "hash": "ada02677b7ca2557cb87b31f2c384484448e2ae005b8708eb3e6d7de51e9c744",
+          "path": "site/src/content/docs/handbook/daemon-api.md"
+        },
+        {
+          "hash": "eb37bbb12dd42ec874d5c2982066822beb9bece34c41c9d6a1cdc1e5cab4a072",
+          "path": "site/src/content/docs/handbook/getting-started.md"
+        },
+        {
+          "hash": "da1fdcec76faf04e70373528274025f683d53811c031c11fcd45d94223995289",
+          "path": "site/src/content/docs/handbook/index.md"
+        },
+        {
+          "hash": "391533713539035d3c92282579d43de0f137067867fdb502d7eaea3c74601d2a",
+          "importOrder": [
+            "site/src/styles/global.css",
+            "site/src/site-config.ts"
+          ],
+          "importsFiles": [
+            "site/src/site-config.ts",
+            "site/src/styles/global.css"
+          ],
+          "path": "site/src/pages/index.astro"
+        },
+        {
+          "constantOnly": true,
+          "hash": "20be2264b80559eb5df968e6c125b184cd162f876fd5ec82ea7480b7b7e75574",
+          "path": "site/src/site-config.ts"
+        },
+        {
+          "hash": "29ee8df91833e694bdba973126b34a6177de4cf01dab6d9ef7d3126e8e2b67fb",
+          "path": "site/src/styles/global.css"
+        },
+        {
+          "hash": "51d012e49bcba75b105bdc8aa7a6d1a6733a00ace857b24423c75215ebcff631",
+          "path": "site/src/styles/starlight-custom.css"
+        },
+        {
+          "hash": "b5b0a5b04a14cddd7713c5e1c82e86c79c17c2f86b170e26e9b170b3d5e01cd9",
+          "path": "site/tsconfig.json"
+        }
+      ],
+      "globs": [
+        "site/**"
+      ],
+      "importConfidence": "full",
+      "name": "site",
+      "origin": "authored",
+      "role": "site",
+      "testedBy": 0,
+      "unresolvedSites": 0
+    },
+    {
+      "dynamicReads": 0,
+      "dynamicSpawns": 0,
+      "dynamicSpawnsInTests": 0,
+      "dynamicWrites": 0,
+      "entryPoints": [],
+      "externals": 0,
+      "files": [
+        {
+          "hash": "3f7edd72eac91614fcf49f709dd4e560c74ebef8da68a53a02947e5611cd1869",
+          "path": "tests/LeaseGateLite.Tests/AssemblyInfo.cs"
+        },
+        {
+          "hash": "bc76d05c65beafe80763e729c778c616f4f3a99296dbb4387847f0aa27450563",
+          "path": "tests/LeaseGateLite.Tests/DaemonStateTests.cs"
+        },
+        {
+          "hash": "2261806bdd1030a67196c3f3f4b5508edb0bf3b8bd64a94582b540655edc6153",
+          "path": "tests/LeaseGateLite.Tests/LeaseGateLite.Tests.csproj"
+        }
+      ],
+      "globs": [
+        "tests/**"
+      ],
+      "importConfidence": "full",
+      "name": "tests",
+      "origin": "authored",
+      "role": "test",
+      "testRunners": [
+        "dotnet test"
+      ],
+      "testedBy": 0,
+      "unresolvedSites": 0
+    }
+  ],
+  "doors": [
+    {
+      "checksCount": 0,
+      "commands": [
+        {
+          "dir": "",
+          "job": "build-and-test",
+          "programs": [
+            "npx"
+          ],
+          "step": "Atlas check"
+        },
+        {
+          "dir": "",
+          "job": "build-and-test",
+          "programs": [
+            "dotnet"
+          ],
+          "step": "Restore dependencies"
+        },
+        {
+          "dir": "",
+          "job": "build-and-test",
+          "programs": [
+            "dotnet"
+          ],
+          "step": "Build"
+        },
+        {
+          "dir": "",
+          "job": "build-and-test",
+          "programs": [
+            "dotnet"
+          ],
+          "step": "Run tests"
+        }
+      ],
+      "elsewhere": [],
+      "file": ".github/workflows/ci.yml",
+      "jobs": [
+        {
+          "basis": "declared",
+          "name": "build-and-test",
+          "runsOn": [
+            {
+              "labels": [
+                "windows-latest"
+              ],
+              "platform": {
+                "cpu": "x64",
+                "os": "win32"
+              }
+            }
+          ],
+          "setup": [
+            {
+              "ranges": [
+                {
+                  "from": "22",
+                  "range": ">=22.0.0 <23.0.0-0"
+                }
+              ],
+              "step": "1",
+              "uses": "actions/setup-node",
+              "version": "22"
+            }
+          ]
+        }
+      ],
+      "landings": [],
+      "mentions": [
+        {
+          "job": "build-and-test",
+          "path": "src/LeaseGateLite.Contracts/LeaseGateLite.Contracts.csproj"
+        },
+        {
+          "job": "build-and-test",
+          "path": "src/LeaseGateLite.Daemon/LeaseGateLite.Daemon.csproj"
+        }
+      ],
+      "name": "CI",
+      "permissions": [
+        "contents:read"
+      ],
+      "pushes": false,
+      "reach": [
+        {
+          "boundary": "tests",
+          "depth": 0,
+          "files": 1
+        }
+      ],
+      "readers": [],
+      "runs": [
+        {
+          "job": "build-and-test",
+          "matched": true,
+          "path": "tests/LeaseGateLite.Tests/LeaseGateLite.Tests.csproj",
+          "runKind": "executes",
+          "via": "dotnet build"
+        }
+      ],
+      "runsCount": 1,
+      "secrets": [],
+      "sends": {
+        "deploysPages": false,
+        "dispatchesTo": [],
+        "opensIssues": false,
+        "opensIssuesOnFailure": false,
+        "opensPullRequests": false,
+        "publishes": false,
+        "publishesTo": [],
+        "releases": false
+      },
+      "stages": [],
+      "tests": [
+        {
+          "files": 1,
+          "job": "build-and-test",
+          "runner": "dotnet test",
+          "step": "Run tests"
+        }
+      ],
+      "triggers": [
+        {
+          "branches": [
+            "main"
+          ],
+          "event": "pull_request"
+        },
+        {
+          "branches": [
+            "main"
+          ],
+          "event": "push",
+          "paths": [
+            "*.slnx",
+            ".github/workflows/**",
+            "atlas/**",
+            "site/astro.config.mjs",
+            "site/package-lock.json",
+            "site/package.json",
+            "src/**",
+            "tests/**"
+          ]
+        },
+        {
+          "event": "workflow_dispatch"
+        }
+      ],
+      "uses": [
+        "actions/checkout",
+        "actions/setup-dotnet",
+        "actions/setup-node",
+        "actions/upload-artifact"
+      ],
+      "usesWorkflowToken": false
+    },
+    {
+      "checksCount": 0,
+      "commands": [
+        {
+          "dir": "site",
+          "job": "build",
+          "programs": [
+            "npm"
+          ],
+          "step": "Install site dependencies"
+        },
+        {
+          "dir": "site",
+          "job": "build",
+          "programs": [
+            "npm"
+          ],
+          "step": "Build site"
+        }
+      ],
+      "elsewhere": [],
+      "file": ".github/workflows/pages.yml",
+      "jobs": [
+        {
+          "basis": "declared",
+          "name": "build",
+          "runsOn": [
+            {
+              "labels": [
+                "ubuntu-latest"
+              ],
+              "platform": {
+                "cpu": "x64",
+                "libc": "glibc",
+                "os": "linux"
+              }
+            }
+          ],
+          "setup": [
+            {
+              "ranges": [
+                {
+                  "from": "22",
+                  "range": ">=22.0.0 <23.0.0-0"
+                }
+              ],
+              "step": "1",
+              "uses": "actions/setup-node",
+              "version": "22"
+            }
+          ]
+        },
+        {
+          "basis": "declared",
+          "environment": {
+            "name": "github-pages"
+          },
+          "name": "deploy",
+          "runsOn": [
+            {
+              "labels": [
+                "ubuntu-latest"
+              ],
+              "platform": {
+                "cpu": "x64",
+                "libc": "glibc",
+                "os": "linux"
+              }
+            }
+          ]
+        }
+      ],
+      "landings": [],
+      "mentions": [],
+      "name": "Deploy site to GitHub Pages",
+      "permissions": [
+        "contents:read",
+        "id-token:write",
+        "pages:write"
+      ],
+      "pushes": false,
+      "reach": [
+        {
+          "boundary": "site",
+          "depth": 0,
+          "files": 5
+        }
+      ],
+      "readers": [],
+      "runs": [
+        {
+          "job": "build",
+          "matched": true,
+          "path": "site/astro.config.mjs",
+          "runKind": "executes",
+          "via": "astro build"
+        },
+        {
+          "directory": true,
+          "job": "build",
+          "matched": true,
+          "path": "site/src/",
+          "runKind": "executes",
+          "via": "astro build"
+        }
+      ],
+      "runsCount": 2,
+      "secrets": [],
+      "sends": {
+        "deploysPages": true,
+        "dispatchesTo": [],
+        "opensIssues": false,
+        "opensIssuesOnFailure": false,
+        "opensPullRequests": false,
+        "publishes": false,
+        "publishesTo": [],
+        "releases": false
+      },
+      "stages": [],
+      "triggers": [
+        {
+          "branches": [
+            "main"
+          ],
+          "event": "push",
+          "paths": [
+            ".github/workflows/pages.yml",
+            "site/**"
+          ]
+        },
+        {
+          "event": "workflow_dispatch"
+        }
+      ],
+      "uses": [
+        "actions/checkout",
+        "actions/deploy-pages",
+        "actions/setup-node",
+        "actions/upload-pages-artifact"
+      ],
+      "usesWorkflowToken": false
+    }
+  ],
+  "edges": [],
+  "engine": "1.24.0",
+  "generatedFrom": {
+    "commit": "2461665cfaecd691958e4b8575a5a8bbfe296f93",
+    "tracked": 110
+  },
+  "landings": [
+    {
+      "readers": [
+        {
+          "by": "site/astro.config.mjs",
+          "call": "content-collection",
+          "confidence": "ast"
+        }
+      ],
+      "target": "site/src/content/docs",
+      "writers": []
+    },
+    {
+      "readers": [
+        {
+          "by": "site/astro.config.mjs",
+          "call": "autogenerate",
+          "confidence": "ast"
+        }
+      ],
+      "target": "site/src/content/docs/handbook",
+      "writers": []
+    },
+    {
+      "readers": [
+        {
+          "by": "README.es.md",
+          "call": "--project",
+          "confidence": "text"
+        },
+        {
+          "by": "README.fr.md",
+          "call": "--project",
+          "confidence": "text"
+        },
+        {
+          "by": "README.hi.md",
+          "call": "--project",
+          "confidence": "text"
+        },
+        {
+          "by": "README.it.md",
+          "call": "--project",
+          "confidence": "text"
+        },
+        {
+          "by": "README.ja.md",
+          "call": "--project",
+          "confidence": "text"
+        },
+        {
+          "by": "README.md",
+          "call": "--project",
+          "confidence": "text"
+        },
+        {
+          "by": "README.pt-BR.md",
+          "call": "--project",
+          "confidence": "text"
+        },
+        {
+          "by": "README.zh.md",
+          "call": "--project",
+          "confidence": "text"
+        },
+        {
+          "by": "site/src/content/docs/handbook/beginners.md",
+          "call": "--project",
+          "confidence": "text"
+        },
+        {
+          "by": "site/src/content/docs/handbook/getting-started.md",
+          "call": "--project",
+          "confidence": "text"
+        }
+      ],
+      "target": "src/LeaseGateLite.App",
+      "writers": []
+    },
+    {
+      "readers": [
+        {
+          "by": ".github/workflows/ci.yml",
+          "confidence": "config"
+        }
+      ],
+      "target": "src/LeaseGateLite.Contracts/LeaseGateLite.Contracts.csproj",
+      "writers": []
+    },
+    {
+      "readers": [
+        {
+          "by": ".github/ISSUE_TEMPLATE/bug_report.md",
+          "call": "--project",
+          "confidence": "text"
+        },
+        {
+          "by": "README.es.md",
+          "call": "--project",
+          "confidence": "text"
+        },
+        {
+          "by": "README.fr.md",
+          "call": "--project",
+          "confidence": "text"
+        },
+        {
+          "by": "README.hi.md",
+          "call": "--project",
+          "confidence": "text"
+        },
+        {
+          "by": "README.it.md",
+          "call": "--project",
+          "confidence": "text"
+        },
+        {
+          "by": "README.ja.md",
+          "call": "--project",
+          "confidence": "text"
+        },
+        {
+          "by": "README.md",
+          "call": "--project",
+          "confidence": "text"
+        },
+        {
+          "by": "README.pt-BR.md",
+          "call": "--project",
+          "confidence": "text"
+        },
+        {
+          "by": "README.zh.md",
+          "call": "--project",
+          "confidence": "text"
+        },
+        {
+          "by": "site/src/content/docs/handbook/beginners.md",
+          "call": "--project",
+          "confidence": "text"
+        },
+        {
+          "by": "site/src/content/docs/handbook/getting-started.md",
+          "call": "--project",
+          "confidence": "text"
+        }
+      ],
+      "target": "src/LeaseGateLite.Daemon",
+      "writers": []
+    },
+    {
+      "readers": [
+        {
+          "by": ".github/workflows/ci.yml",
+          "confidence": "config"
+        }
+      ],
+      "target": "src/LeaseGateLite.Daemon/LeaseGateLite.Daemon.csproj",
+      "writers": []
+    }
+  ],
+  "overlaps": [],
+  "submodules": [],
+  "symlinks": [],
+  "testFiles": 3,
+  "unassigned": []
+}

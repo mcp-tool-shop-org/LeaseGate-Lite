@@ -1,0 +1,38 @@
+summary: ""
+boundaries:
+  - name: .github
+    globs:
+      - .github/**
+    role: config
+  - name: root
+    globs:
+      - "*"
+    role: docs
+  - name: scripts
+    globs:
+      - scripts/**
+    role: code
+  - name: site
+    globs:
+      - site/**
+    role: site
+  - name: LeaseGateLite.App
+    globs:
+      - src/LeaseGateLite.App/**
+    role: code
+  - name: LeaseGateLite.Contracts
+    globs:
+      - src/LeaseGateLite.Contracts/**
+    role: code
+  - name: LeaseGateLite.Daemon
+    globs:
+      - src/LeaseGateLite.Daemon/**
+    role: code
+  - name: LeaseGateLite.Tray
+    globs:
+      - src/LeaseGateLite.Tray/**
+    role: code
+  - name: tests
+    globs:
+      - tests/**
+    role: test
