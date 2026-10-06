@@ -1,11 +1,15 @@
+using System.Text.Json.Serialization;
+
 namespace LeaseGateLite.Contracts;
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum LeaseGateLiteMode
 {
     Embedded,
     Daemon
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum HeatState
 {
     Calm,
@@ -13,6 +17,7 @@ public enum HeatState
     Spicy
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum CooldownBehavior
 {
     Off,
@@ -20,6 +25,7 @@ public enum CooldownBehavior
     Aggressive
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum OverflowBehavior
 {
     TrimOldest,
@@ -27,6 +33,7 @@ public enum OverflowBehavior
     QueueOnly
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ThrottleReason
 {
     None,
@@ -37,6 +44,7 @@ public enum ThrottleReason
     ManualClamp
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum EventCategory
 {
     Lease,
@@ -48,6 +56,7 @@ public enum EventCategory
     Audit
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum PressureMode
 {
     Normal,
