@@ -158,8 +158,8 @@
         "path": ".github/dependabot.yml"
       },
       {
-        "commits": 5,
-        "lines": 18,
+        "commits": 6,
+        "lines": 27,
         "path": ".github/workflows/ci.yml"
       },
       {
@@ -174,6 +174,31 @@
       },
       {
         "commits": 1,
+        "lines": 72,
+        "path": "atlas/README.md"
+      },
+      {
+        "commits": 1,
+        "lines": 38,
+        "path": "atlas/boundaries.yaml"
+      },
+      {
+        "commits": 1,
+        "lines": 131,
+        "path": "atlas/page.json"
+      },
+      {
+        "commits": 1,
+        "lines": 291,
+        "path": "atlas/statistics.json"
+      },
+      {
+        "commits": 1,
+        "lines": 1101,
+        "path": "atlas/structure.json"
+      },
+      {
+        "commits": 1,
         "lines": 28,
         "path": "scripts/package-v0.1.0.ps1"
       },
@@ -183,44 +208,14 @@
         "path": "site/astro.config.mjs"
       },
       {
-        "commits": 10,
-        "lines": 6267,
+        "commits": 11,
+        "lines": 6273,
         "path": "site/package-lock.json"
       },
       {
         "commits": 2,
         "lines": 8,
         "path": "site/package.json"
-      },
-      {
-        "commits": 1,
-        "lines": 145,
-        "path": "site/src/content/docs/handbook/beginners.md"
-      },
-      {
-        "commits": 1,
-        "lines": 55,
-        "path": "site/src/content/docs/handbook/configuration.md"
-      },
-      {
-        "commits": 1,
-        "lines": 14,
-        "path": "site/src/content/docs/handbook/control-panel.md"
-      },
-      {
-        "commits": 1,
-        "lines": 27,
-        "path": "site/src/content/docs/handbook/daemon-api.md"
-      },
-      {
-        "commits": 1,
-        "lines": 6,
-        "path": "site/src/content/docs/handbook/getting-started.md"
-      },
-      {
-        "commits": 1,
-        "lines": 1,
-        "path": "site/src/content/docs/handbook/index.md"
       },
       {
         "commits": 3,
@@ -241,11 +236,11 @@
   },
   "confidence": {
     "level": "low",
-    "reason": "fewer than 30 qualifying commits in the window, and fewer than 20 source files reach 10 revisions"
+    "reason": "fewer than 30 qualifying commits in the window, and fewer than 25 source files reach 10 revisions"
   },
-  "generatedAt": "2026-10-01T03:07:23.231Z",
+  "generatedAt": "2026-10-15T02:52:02.076Z",
   "generatedFrom": {
-    "commit": "2461665cfaecd691958e4b8575a5a8bbfe296f93"
+    "commit": "1e4962f7c35a190e27df9c1f5795b545ec3ade3e"
   },
   "pairs": [],
   "parameters": {
@@ -258,16 +253,16 @@
     "floor": "fallen",
     "floorHeld": false,
     "floorTrigger": "both",
-    "headDate": "2026-09-17T18:59:39-07:00",
+    "headDate": "2026-10-01T16:54:18-04:00",
     "inScopeFiles": 115,
     "pinnedStart": null,
-    "priorFloor": null,
-    "qualifyingCommits": 24,
+    "priorFloor": "fallen",
+    "qualifyingCommits": 25,
     "qualifyingMinimum": 30,
     "revisions": 5,
     "shared": 10,
     "sharedFloorUsed": 3,
-    "since": "2026-03-22T01:59:39.000Z",
+    "since": "2026-04-04T20:54:18.000Z",
     "sourceExtensions": [
       ".js",
       ".mjs",
