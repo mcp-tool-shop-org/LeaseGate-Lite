@@ -41,7 +41,7 @@ jobs:
 
       - name: Atlas check
         shell: bash
-        run: npx --yes @dogfood-lab/atlas@1.24.0 check
+        run: npx --yes @dogfood-lab/atlas@1.26.0 check
 
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0

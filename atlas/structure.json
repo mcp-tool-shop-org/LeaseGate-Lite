@@ -25,7 +25,7 @@
           "path": ".github/dependabot.yml"
         },
         {
-          "hash": "20094b79c51f7dcaa8b2d91235d6796bbb7073f133afbf5e7faea590a1bddb18",
+          "hash": "23dd6a042a8944ce2b78d9403275efd8ca482f8cedfd9f810c4e8e0ba9d7f14b",
           "path": ".github/workflows/ci.yml"
         },
         {
@@ -514,11 +514,11 @@
           "path": "site/astro.config.mjs"
         },
         {
-          "hash": "1be0148ea2a3b47ec21f091b74d4135dbd06aa34d69b5643bb4fe65d8dad4b64",
+          "hash": "01b4c7259256650c2f468783bdaf2d5edbf6ac868174322bc113e2b7667c47bb",
           "path": "site/package-lock.json"
         },
         {
-          "hash": "17ed487ab5049bb52f8c5e35f77f21be7da639f1fb6a3fa70e9b02ffabfe7be6",
+          "hash": "f70476bbf956f26e144852469081483b247f4867786b127be7c97ffdc39cfb39",
           "path": "site/package.json"
         },
         {
@@ -607,7 +607,7 @@
           "path": "tests/LeaseGateLite.Tests/DaemonStateTests.cs"
         },
         {
-          "hash": "2261806bdd1030a67196c3f3f4b5508edb0bf3b8bd64a94582b540655edc6153",
+          "hash": "26a7c715f8014eb9c06480ec3cbb35340dc8f9f3ded67a1a5f76a00d326fb007",
           "path": "tests/LeaseGateLite.Tests/LeaseGateLite.Tests.csproj"
         }
       ],
@@ -927,9 +927,9 @@
     }
   ],
   "edges": [],
-  "engine": "1.24.0",
+  "engine": "1.26.0",
   "generatedFrom": {
-    "commit": "1e4962f7c35a190e27df9c1f5795b545ec3ade3e",
+    "commit": "293eddd22567b2f0449f730f1dd8cdd83cd08f05",
     "tracked": 110
   },
   "landings": [
