@@ -7,6 +7,7 @@ public static class MauiProgram
 {
 	public static MauiApp CreateMauiApp()
 	{
+		HookCrashLogging();
 		var builder = MauiApp.CreateBuilder();
 		builder
 			.UseMauiApp<App>()
@@ -30,5 +31,64 @@ public static class MauiProgram
 #endif
 
 		return builder.Build();
+	}
+
+	private static void HookCrashLogging()
+	{
+		var logDir = Path.GetTempPath();
+		var firstChanceLog = Path.Combine(logDir, "leasegate-firstchance.log");
+		var crashLog = Path.Combine(logDir, "leasegate-crash.log");
+
+		// Managed first-chance exceptions (very noisy but extremely informative)
+		AppDomain.CurrentDomain.FirstChanceException += (s, e) =>
+		{
+			try
+			{
+				File.AppendAllText(firstChanceLog,
+					$"{DateTime.Now:o} FIRST_CHANCE: {e.Exception.GetType().FullName}: {e.Exception.Message}\n");
+			}
+			catch { }
+		};
+
+		// Unhandled exceptions
+		AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+		{
+			try
+			{
+				File.AppendAllText(crashLog,
+					$"{DateTime.Now:o} UNHANDLED: {e.ExceptionObject}\n");
+			}
+			catch { }
+		};
+
+		// Unobserved task exceptions
+		TaskScheduler.UnobservedTaskException += (s, e) =>
+		{
+			try
+			{
+				File.AppendAllText(crashLog,
+					$"{DateTime.Now:o} UNOBSERVED: {e.Exception}\n");
+			}
+			catch { }
+			e.SetObserved();
+		};
+
+		// WinUI unhandled exceptions (important for UI thread crashes)
+#if WINDOWS
+		try
+		{
+			Microsoft.UI.Xaml.Application.Current.UnhandledException += (s, e) =>
+			{
+				try
+				{
+					File.AppendAllText(crashLog,
+						$"{DateTime.Now:o} WINUI: {e.Exception}\n");
+				}
+				catch { }
+				e.Handled = false; // keep default crash behavior
+			};
+		}
+		catch { } // Application.Current might not be set yet
+#endif
 	}
 }
